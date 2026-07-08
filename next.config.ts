@@ -65,6 +65,23 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   /**
+   * Emit a self-contained `.next/standalone` build (server.js + only the
+   * traced node_modules) so the Docker runtime stage can ship without a
+   * full `npm install`. See Dockerfile.
+   */
+  output: "standalone",
+
+  /**
+   * The i18n dictionaries are pulled in via a dynamic `import()` with a
+   * runtime-computed path (`src/i18n/request.ts`), which file tracing
+   * can miss. Force them into the standalone trace so the container has
+   * every locale JSON at runtime.
+   */
+  outputFileTracingIncludes: {
+    "/*": ["./messages/**/*.json"],
+  },
+
+  /**
    * Cache-Control policy.
    *
    * Why this exists:
