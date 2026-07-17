@@ -28,6 +28,7 @@ const ROW = {
   auto_reply_max_per_conversation: 3,
   embeddings_api_key: null,
   context_message_limit: 30,
+  memory_autowrite_enabled: false,
 }
 
 describe('loadAiConfig requireActive', () => {

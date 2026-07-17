@@ -632,6 +632,18 @@ export function MessageThread({
         .eq("id", conversation.id);
 
       onStatusChange(conversation.id, status);
+
+      // Fork extension (ai-memory): when a thread is closed, ask the AI
+      // to summarise it into durable contact memory. Fire-and-forget and
+      // a no-op unless the account opted in — must never block or fail
+      // the close action.
+      if (status === "closed") {
+        void fetch("/api/ai/memory/summarize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ conversation_id: conversation.id }),
+        }).catch(() => {});
+      }
     },
     [conversation, onStatusChange]
   );

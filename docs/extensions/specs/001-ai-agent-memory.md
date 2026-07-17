@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|--------|
-| Status | **Implemented** (v1, migration `9001_ai_contact_memory.sql`) |
+| Status | **Implemented** (v1 `9001_…`; v2 auto-write `9002_…`) |
 | Owner | IdeasLab (fork) |
 | Related upstream | `ai_configs` (029), knowledge base (030), `buildConversationContext` |
 | Fork path | `docs/extensions/specs/` (this file) |
@@ -186,10 +186,24 @@ If `contact_id` is null (orphan conversation), skip memory silently.
 
 ### 7.2 Write path (v1)
 
-| Path | Behaviour |
-|------|-----------|
-| Manual UI | CRUD on contact detail (and/or a small panel in the conversation sidebar). |
-| AI suggest (optional flag) | Model returns structured `{ title, content }` proposals; persisted only when flag on or after agent accept. |
+| Path | Behaviour | Status |
+|------|-----------|--------|
+| Manual UI | CRUD on contact detail (Memory tab). | **v1 shipped** |
+| AI auto-write | On conversation **close**, the AI summarises the thread into `{ title, content }` facts and **inserts** them with `source = 'ai_suggested'`. Gated by `ai_configs.memory_autowrite_enabled` (opt-in, off by default). | **v2 shipped** |
+
+**Auto-write specifics (v2):**
+
+- Trigger: inbox **close** action → fire-and-forget `POST /api/ai/memory/summarize`.
+  (Automation-driven closes and a per-turn trigger are not wired in v2.)
+- Extraction reuses the account's provider via `generateReply` with a JSON-only
+  extraction prompt; `extractMemoryFacts` parses/validates/clamps the output
+  (≤ `MAX_EXTRACTED_FACTS`, per-field length caps).
+- **Never overwrites human memory:** insert uses `ignoreDuplicates` on
+  `(account_id, contact_id, title)`, so the AI only *adds* facts it hasn't recorded;
+  a manual entry with the same title is left untouched. Known facts are fed back into
+  the prompt so the model doesn't re-propose them.
+- Best-effort: `summarizeConversationToMemory` never throws — a failed summarisation
+  must not break closing a conversation.
 
 Do **not** dump full chat transcripts into memory; store concise facts only.
 
@@ -254,8 +268,9 @@ upstream-adjacent file). Prefer **new files** over large edits to `generate.ts` 
 
 1. **Write ACL:** **agent+** may create/update/delete; any member (viewer+) may read
    (operational-data RLS, mirroring `contacts`/`contact_notes`).
-2. **Auto-write:** **manual-only** in v1. `source` column reserves `ai_suggested`/`import`
-   for later; no auto-write path shipped.
+2. **Auto-write:** v1 manual-only; **v2 adds opt-in auto-write** on conversation close
+   (`memory_autowrite_enabled`, off by default), inserting `source = 'ai_suggested'`
+   facts without overwriting manual entries. See §7.2.
 3. **Unique `title`:** **enforced** — `UNIQUE NULLS NOT DISTINCT (account_id, contact_id,
    title)`. The create/update API returns **409** on collision (`code: duplicate_title`).
    v1 UI/API require a non-empty title (column stays nullable for future import/AI use).
@@ -271,3 +286,4 @@ upstream-adjacent file). Prefer **new files** over large edits to `generate.ts` 
 | 2026-07-16 | Spec drafted; store under `docs/extensions/specs/` for fork isolation. |
 | 2026-07-16 | Memory associated to `contact_id`; context line count configurable in agent setup; persistence in Supabase. |
 | 2026-07-16 | v1 implemented: migration `9001` (fork-reserved 9000+ band), `loadContactMemory` under `src/lib/extensions/ai-memory/`, memory block in `buildSystemPrompt`, wired into draft + auto-reply, `/api/ai/memory` CRUD, Settings → AI context field, contact Memory tab. Open questions resolved (agent+ writes, manual-only, unique title→409, env-as-ceiling). |
+| 2026-07-16 | v2 auto-write: migration `9002` (`memory_autowrite_enabled`, opt-in/off). `summarizeConversationToMemory` + `extractMemoryFacts` under `src/lib/extensions/ai-memory/summarize.ts`; `POST /api/ai/memory/summarize`; triggered fire-and-forget from the inbox close action; inserts `source='ai_suggested'` facts (ignore-duplicates, never clobbers manual); Settings → AI toggle; "AI" badge on suggested entries in the Memory tab. |
