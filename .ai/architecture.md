@@ -36,12 +36,17 @@ A separate **MCP server** (`mcp-server/`) exposes the CRM to AI assistants.
 
 ## Data model
 
-Postgres, defined by versioned migrations in `supabase/migrations/` (`001_…`→`027_…`).
+Postgres, defined by versioned migrations in `supabase/migrations/` (upstream `001_…`→
+`036_…`; fork-owned migrations use a reserved `9000+` band, e.g. `9001_…`, to avoid
+collisions with upstream numbering).
 Everything is **account-scoped** and protected by **Row Level Security**. Core entities:
 accounts + members (sharing, invitations, presence), contacts (tags, custom fields, phone
 dedup), conversations + messages + message actions, pipelines + deals, broadcasts +
 recipients (wamid, incremental counts), automations + flows (+ media), message templates
 (Meta integration), whatsapp_config (phone-number registration), api_keys, notifications.
+AI: `ai_configs` (BYO key, `context_message_limit`), `ai_knowledge_*` (KB + pgvector),
+and — fork extension — `ai_contact_memories` (durable per-contact notes injected into
+the reply prompt; see `docs/extensions/specs/001-ai-agent-memory.md`).
 
 ## Key flows
 

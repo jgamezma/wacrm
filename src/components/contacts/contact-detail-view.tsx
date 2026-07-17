@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { formatCurrency } from '@/lib/currency';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag, ContactNote, CustomField, ContactCustomValue, Deal, MessageTemplate } from '@/types';
+import type { Contact, Tag, ContactTag, ContactNote, ContactMemory, CustomField, ContactCustomValue, Deal, MessageTemplate } from '@/types';
+import { useCan } from '@/hooks/use-can';
 import {
   TemplatePicker,
   type TemplateSendValues,
@@ -86,6 +87,14 @@ export function ContactDetailView({
   const [savingNote, setSavingNote] = useState(false);
   const [loadingNotes, setLoadingNotes] = useState(false);
 
+  // Memory tab (AI contact memory)
+  const canEditMemory = useCan('send-messages');
+  const [memories, setMemories] = useState<ContactMemory[]>([]);
+  const [memoryTitle, setMemoryTitle] = useState('');
+  const [memoryContent, setMemoryContent] = useState('');
+  const [savingMemory, setSavingMemory] = useState(false);
+  const [loadingMemory, setLoadingMemory] = useState(false);
+
   // Custom fields tab
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -144,6 +153,23 @@ export function ContactDetailView({
     setLoadingNotes(false);
   }, [contactId, supabase]);
 
+  const fetchMemories = useCallback(async () => {
+    if (!contactId) return;
+    setLoadingMemory(true);
+    try {
+      const res = await fetch(
+        `/api/ai/memory?contact_id=${encodeURIComponent(contactId)}`,
+      );
+      const data = await res.json();
+      if (res.ok) setMemories(data.memories ?? []);
+      else toast.error(data.error ?? t('toastMemoryLoadFailed'));
+    } catch {
+      toast.error(t('toastMemoryLoadFailed'));
+    } finally {
+      setLoadingMemory(false);
+    }
+  }, [contactId, t]);
+
   const fetchCustomFields = useCallback(async () => {
     if (!contactId) return;
     setLoadingCustom(true);
@@ -184,10 +210,11 @@ export function ContactDetailView({
       fetchContact();
       fetchTags();
       fetchNotes();
+      fetchMemories();
       fetchCustomFields();
       fetchDeals();
     }
-  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchCustomFields, fetchDeals]);
+  }, [open, contactId, fetchContact, fetchTags, fetchNotes, fetchMemories, fetchCustomFields, fetchDeals]);
 
   async function copyPhone() {
     if (!contact) return;
@@ -294,6 +321,54 @@ export function ContactDetailView({
     } else {
       setNotes((prev) => prev.filter((n) => n.id !== noteId));
       toast.success(t('toastNoteDeleted'));
+    }
+  }
+
+  async function addMemory() {
+    if (!contactId || !memoryTitle.trim() || !memoryContent.trim()) return;
+    setSavingMemory(true);
+    try {
+      const res = await fetch('/api/ai/memory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contact_id: contactId,
+          title: memoryTitle.trim(),
+          content: memoryContent.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMemoryTitle('');
+        setMemoryContent('');
+        // New entry is most-recently-updated, so it sorts first.
+        setMemories((prev) => [data.memory, ...prev]);
+        toast.success(t('toastMemoryAdded'));
+      } else if (res.status === 409) {
+        toast.error(t('toastMemoryDuplicate'));
+      } else {
+        toast.error(data.error ?? t('toastMemoryAddFailed'));
+      }
+    } catch {
+      toast.error(t('toastMemoryAddFailed'));
+    } finally {
+      setSavingMemory(false);
+    }
+  }
+
+  async function deleteMemory(memoryId: string) {
+    try {
+      const res = await fetch(`/api/ai/memory/${memoryId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setMemories((prev) => prev.filter((m) => m.id !== memoryId));
+        toast.success(t('toastMemoryDeleted'));
+      } else {
+        toast.error(t('toastMemoryDeleteFailed'));
+      }
+    } catch {
+      toast.error(t('toastMemoryDeleteFailed'));
     }
   }
 
@@ -477,6 +552,12 @@ export function ContactDetailView({
                   {t('tabs.notes')}
                 </TabsTrigger>
                 <TabsTrigger
+                  value="memory"
+                  className="data-active:bg-muted data-active:text-primary text-muted-foreground"
+                >
+                  {t('tabs.memory')}
+                </TabsTrigger>
+                <TabsTrigger
                   value="custom"
                   className="data-active:bg-muted data-active:text-primary text-muted-foreground"
                 >
@@ -639,6 +720,95 @@ export function ContactDetailView({
                             year: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Memory Tab (AI contact memory) */}
+              <TabsContent value="memory" className="flex-1 flex flex-col min-h-0 px-4 py-3">
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('memoryTab.desc')}
+                </p>
+                {canEditMemory ? (
+                  <div className="space-y-2 mb-3">
+                    <Input
+                      value={memoryTitle}
+                      onChange={(e) => setMemoryTitle(e.target.value)}
+                      placeholder={t('memoryTab.titlePlaceholder')}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-sm"
+                    />
+                    <Textarea
+                      value={memoryContent}
+                      onChange={(e) => setMemoryContent(e.target.value)}
+                      placeholder={t('memoryTab.contentPlaceholder')}
+                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
+                    />
+                    <Button
+                      onClick={addMemory}
+                      disabled={
+                        !memoryTitle.trim() || !memoryContent.trim() || savingMemory
+                      }
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      size="sm"
+                    >
+                      {savingMemory ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="size-3.5" />
+                      )}
+                      {t('memoryTab.save')}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mb-3 italic">
+                    {t('memoryTab.readOnly')}
+                  </p>
+                )}
+
+                <div className="flex-1 overflow-y-auto space-y-2">
+                  {loadingMemory ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : memories.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      {t('memoryTab.noMemories')}
+                    </p>
+                  ) : (
+                    memories.map((memory) => (
+                      <div
+                        key={memory.id}
+                        className="rounded-lg bg-muted/50 border border-border/50 p-3 group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            {memory.title && (
+                              <p className="text-sm font-medium text-foreground">
+                                {memory.title}
+                              </p>
+                            )}
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {memory.content}
+                            </p>
+                          </div>
+                          {canEditMemory && (
+                            <button
+                              onClick={() => deleteMemory(memory.id)}
+                              className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all cursor-pointer shrink-0"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          {new Date(memory.updated_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
                           })}
                         </p>
                       </div>

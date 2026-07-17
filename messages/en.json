@@ -357,6 +357,7 @@
         "activity": "Activity",
         "notes": "Notes",
         "custom": "Custom Fields",
+        "memory": "Memory",
         "deals": "Deals",
       "noTags": "No tags",
       "noDeals": "No deals",
@@ -388,6 +389,14 @@
         "save": "Add Note",
         "noNotes": "No notes yet."
       },
+      "memoryTab": {
+        "desc": "Durable facts the AI assistant remembers about this contact across all their conversations — preferences, prior context, account details.",
+        "titlePlaceholder": "Label (e.g. Preferred language)",
+        "contentPlaceholder": "Fact to remember (e.g. Prefers Spanish; VIP customer since 2024)",
+        "save": "Add Memory",
+        "noMemories": "No memories yet.",
+        "readOnly": "Only agents and above can edit contact memory."
+      },
       "dealsTab": {
         "noDeals": "No deals yet"
       },
@@ -406,6 +415,12 @@
       "toastNoteAdded": "Note added",
       "toastNoteDeleteFailed": "Failed to delete note",
       "toastNoteDeleted": "Note deleted",
+      "toastMemoryLoadFailed": "Failed to load memory",
+      "toastMemoryAddFailed": "Failed to save memory",
+      "toastMemoryAdded": "Memory saved",
+      "toastMemoryDuplicate": "A memory with this label already exists for this contact.",
+      "toastMemoryDeleteFailed": "Failed to delete memory",
+      "toastMemoryDeleted": "Memory deleted",
       "toastCustomFieldsSaved": "Custom fields saved",
       "toastCustomFieldsFailed": "Failed to save custom fields",
       "toastTemplateSent": "Template \"{name}\" sent",
@@ -1653,6 +1668,8 @@
       "autoReplyDesc": "The bot answers new inbound messages automatically (only when no flow handles them and no agent is assigned). Hands off to a human when it can’t help.",
       "maxAutoReplies": "Max auto-replies per conversation",
       "maxAutoRepliesDesc": "After this many bot replies in one thread, the bot goes quiet.",
+      "contextMessages": "Conversation context messages",
+      "contextMessagesDesc": "How many recent messages the assistant reads for context when drafting or auto-replying (5–100). More gives continuity; fewer cuts cost and latency.",
       "handoffTo": "Hand off to",
       "handoffToDesc": "When the bot can’t help — or hits the reply cap — it pauses and routes the chat here, with a short note on what happened.",
       "handoffQueue": "Unassigned queue (any agent can pick it up)",
