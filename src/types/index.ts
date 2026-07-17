@@ -155,6 +155,20 @@ export interface ContactNote {
   created_at: string;
 }
 
+/**
+ * Durable, account-scoped fact the AI reply assistant remembers about a
+ * contact across all their conversations. Managed via /api/ai/memory.
+ * See docs/extensions/specs/001-ai-agent-memory.md.
+ */
+export interface ContactMemory {
+  id: string;
+  title: string | null;
+  content: string;
+  source: 'manual' | 'ai_suggested' | 'import';
+  created_at: string;
+  updated_at: string;
+}
+
 export type ConversationStatus = 'open' | 'pending' | 'closed';
 
 export interface Conversation {

@@ -5,11 +5,12 @@ import { loadAiConfig } from '@/lib/ai/config'
 import { buildConversationContext } from '@/lib/ai/context'
 import { retrieveKnowledge } from '@/lib/ai/knowledge'
 import { generateReply } from '@/lib/ai/generate'
-import { buildSystemPrompt } from '@/lib/ai/defaults'
+import { buildSystemPrompt, resolveContextMessageLimit } from '@/lib/ai/defaults'
 import { latestUserMessage } from '@/lib/ai/query'
 import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
+import { loadContactMemory } from '@/lib/extensions/ai-memory/memory'
 
 /**
  * POST /api/ai/draft  (agent+)
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     // row means "not yours / not found" either way.
     const { data: conversation, error: convErr } = await supabase
       .from('conversations')
-      .select('id')
+      .select('id, contact_id')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr) {
@@ -76,7 +77,11 @@ export async function POST(request: Request) {
       )
     }
 
-    const messages = await buildConversationContext(supabase, conversationId)
+    const messages = await buildConversationContext(
+      supabase,
+      conversationId,
+      resolveContextMessageLimit(config.contextMessageLimit),
+    )
     // Nothing to draft from — a brand-new thread with no customer text
     // would otherwise produce a nonsensical reply-to-nothing.
     if (messages.length === 0) {
@@ -98,10 +103,19 @@ export async function POST(request: Request) {
       latestUserMessage(messages),
     )
 
+    // Durable per-contact memory (best-effort — [] when the thread has
+    // no linked contact or the read fails).
+    const memory = await loadContactMemory(
+      supabase,
+      accountId,
+      conversation.contact_id ?? null,
+    )
+
     const systemPrompt = buildSystemPrompt({
       userPrompt: config.systemPrompt,
       mode: 'draft',
       knowledge,
+      memory,
     })
 
     const { text, usage } = await generateReply({ config, systemPrompt, messages })

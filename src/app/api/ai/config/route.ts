@@ -30,7 +30,7 @@ export async function GET() {
       // `api_key` is selected only to derive `has_key` — it is stripped
       // out below and never returned to the client.
       .select(
-        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key',
+        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key, context_message_limit',
       )
       .eq('account_id', accountId)
       .maybeSingle()
@@ -94,6 +94,13 @@ export async function POST(request: Request) {
     let maxPer = Number(body.auto_reply_max_per_conversation)
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
+
+    // How many recent conversation messages the assistant reads. Clamped
+    // to the same 5–100 range the DB CHECK enforces; defaults to 20 (the
+    // historical env default) when absent or non-numeric.
+    let contextLimit = Number(body.context_message_limit)
+    if (!Number.isFinite(contextLimit)) contextLimit = 20
+    contextLimit = Math.min(100, Math.max(5, Math.floor(contextLimit)))
 
     // Handoff routing target for auto-reply. A non-empty string must be a
     // member of this account (else the conversation would be assigned to a
@@ -167,6 +174,7 @@ export async function POST(request: Request) {
           autoReplyMaxPerConversation: maxPer,
           handoffAgentId: null,
           embeddingsApiKey: null,
+          contextMessageLimit: contextLimit,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -205,6 +213,7 @@ export async function POST(request: Request) {
       is_active: isActive,
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
+      context_message_limit: contextLimit,
     }
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.

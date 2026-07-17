@@ -29,6 +29,10 @@ export interface AiConfig {
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */
   embeddingsApiKey: string | null
+  /** How many recent text messages of the conversation to feed the
+   *  model. Admin-editable per account (bounded 5–100 in the DB);
+   *  `resolveContextMessageLimit` applies the optional env ceiling. */
+  contextMessageLimit: number
 }
 
 /** A single conversation turn in the shape both providers accept. */

@@ -72,6 +72,7 @@ export function AiConfig() {
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
+  const [contextMessages, setContextMessages] = useState(20);
   // Empty string = leave unassigned (shared queue).
   const [handoffAgentId, setHandoffAgentId] = useState('');
   const [members, setMembers] = useState<AccountMember[]>([]);
@@ -99,6 +100,7 @@ export function AiConfig() {
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
+        setContextMessages(data.context_message_limit ?? 20);
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
@@ -150,6 +152,7 @@ export function AiConfig() {
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
+    context_message_limit: contextMessages,
     handoff_agent_id: handoffAgentId || null,
   });
 
@@ -452,6 +455,29 @@ export function AiConfig() {
                   )
                 }
                 disabled={disabled || !autoReplyEnabled}
+                className="w-20"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label htmlFor="ai-context">{t('contextMessages')}</Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('contextMessagesDesc')}
+                </p>
+              </div>
+              <Input
+                id="ai-context"
+                type="number"
+                min={5}
+                max={100}
+                value={contextMessages}
+                onChange={(e) =>
+                  setContextMessages(
+                    Math.min(100, Math.max(5, Number(e.target.value) || 5)),
+                  )
+                }
+                disabled={disabled}
                 className="w-20"
               />
             </div>
