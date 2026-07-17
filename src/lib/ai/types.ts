@@ -33,6 +33,10 @@ export interface AiConfig {
    *  model. Admin-editable per account (bounded 5–100 in the DB);
    *  `resolveContextMessageLimit` applies the optional env ceiling. */
   contextMessageLimit: number
+  /** When true, the AI summarises a conversation into durable contact
+   *  memory when it ends (agent close / auto-reply handoff). Opt-in;
+   *  off by default. Fork extension — see ai-memory spec §7.2. */
+  memoryAutowriteEnabled: boolean
 }
 
 /** A single conversation turn in the shape both providers accept. */

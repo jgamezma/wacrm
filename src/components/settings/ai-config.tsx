@@ -73,6 +73,7 @@ export function AiConfig() {
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
   const [contextMessages, setContextMessages] = useState(20);
+  const [memoryAutowrite, setMemoryAutowrite] = useState(false);
   // Empty string = leave unassigned (shared queue).
   const [handoffAgentId, setHandoffAgentId] = useState('');
   const [members, setMembers] = useState<AccountMember[]>([]);
@@ -101,6 +102,7 @@ export function AiConfig() {
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setContextMessages(data.context_message_limit ?? 20);
+        setMemoryAutowrite(Boolean(data.memory_autowrite_enabled));
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
@@ -153,6 +155,7 @@ export function AiConfig() {
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     context_message_limit: contextMessages,
+    memory_autowrite_enabled: memoryAutowrite,
     handoff_agent_id: handoffAgentId || null,
   });
 
@@ -479,6 +482,22 @@ export function AiConfig() {
                 }
                 disabled={disabled}
                 className="w-20"
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {t('memoryAutowrite')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('memoryAutowriteDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={memoryAutowrite}
+                onCheckedChange={setMemoryAutowrite}
+                disabled={disabled}
               />
             </div>
 

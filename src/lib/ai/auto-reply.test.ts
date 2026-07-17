@@ -81,6 +81,7 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     handoffAgentId: null,
     embeddingsApiKey: null,
     contextMessageLimit: 20,
+    memoryAutowriteEnabled: false,
     ...overrides,
   }
 }

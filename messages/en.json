@@ -395,7 +395,8 @@
         "contentPlaceholder": "Fact to remember (e.g. Prefers Spanish; VIP customer since 2024)",
         "save": "Add Memory",
         "noMemories": "No memories yet.",
-        "readOnly": "Only agents and above can edit contact memory."
+        "readOnly": "Only agents and above can edit contact memory.",
+        "aiBadge": "AI"
       },
       "dealsTab": {
         "noDeals": "No deals yet"
@@ -1670,6 +1671,8 @@
       "maxAutoRepliesDesc": "After this many bot replies in one thread, the bot goes quiet.",
       "contextMessages": "Conversation context messages",
       "contextMessagesDesc": "How many recent messages the assistant reads for context when drafting or auto-replying (5–100). More gives continuity; fewer cuts cost and latency.",
+      "memoryAutowrite": "Auto-save conversation memory",
+      "memoryAutowriteDesc": "When a conversation is closed, the AI summarises it into that contact's memory (durable facts, saved as AI-suggested). Off by default — uses your provider key.",
       "handoffTo": "Hand off to",
       "handoffToDesc": "When the bot can’t help — or hits the reply cap — it pauses and routes the chat here, with a short note on what happened.",
       "handoffQueue": "Unassigned queue (any agent can pick it up)",

@@ -30,7 +30,7 @@ export async function GET() {
       // `api_key` is selected only to derive `has_key` — it is stripped
       // out below and never returned to the client.
       .select(
-        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key, context_message_limit',
+        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, api_key, embeddings_api_key, context_message_limit, memory_autowrite_enabled',
       )
       .eq('account_id', accountId)
       .maybeSingle()
@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         : null
     const isActive = body.is_active === true
     const autoReplyEnabled = body.auto_reply_enabled === true
+    const memoryAutowriteEnabled = body.memory_autowrite_enabled === true
 
     let maxPer = Number(body.auto_reply_max_per_conversation)
     if (!Number.isFinite(maxPer)) maxPer = 3
@@ -175,6 +176,7 @@ export async function POST(request: Request) {
           handoffAgentId: null,
           embeddingsApiKey: null,
           contextMessageLimit: contextLimit,
+          memoryAutowriteEnabled: false,
         })
       } catch (err) {
         if (err instanceof AiError) {
@@ -214,6 +216,7 @@ export async function POST(request: Request) {
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
       context_message_limit: contextLimit,
+      memory_autowrite_enabled: memoryAutowriteEnabled,
     }
     // Only touch the handoff target when the form actually sent the field,
     // so a partial save (e.g. flipping a toggle) doesn't wipe it.

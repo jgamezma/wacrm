@@ -74,6 +74,7 @@ export async function POST(request: Request) {
         handoffAgentId: null,
         embeddingsApiKey: null,
         contextMessageLimit: 20,
+        memoryAutowriteEnabled: false,
       })
     } catch (err) {
       if (err instanceof AiError) {
