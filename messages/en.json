@@ -355,6 +355,7 @@
       "tabs": {
         "details": "Details",
         "activity": "Activity",
+        "tags": "Tags",
         "notes": "Notes",
         "custom": "Custom Fields",
         "memory": "Memory",
