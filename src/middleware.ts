@@ -77,19 +77,31 @@ export async function middleware(request: NextRequest) {
     return withRefreshedCookies(NextResponse.redirect(url))
   }
 
-  // API routes that need auth (not webhooks)
-  if (!user && request.nextUrl.pathname.startsWith('/api/whatsapp/') &&
-      !request.nextUrl.pathname.includes('/webhook')) {
-    return withRefreshedCookies(
-      NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    )
-  }
-
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Every matched request runs `supabase.auth.getUser()` above, which is
+    // a round-trip to Supabase's Auth server. Matching too broadly floods
+    // that endpoint and trips its rate limit (429 over_request_rate_limit).
+    // Two exclusions keep the volume sane, per Next.js' own recommendation:
+    //
+    //   - `api`: API routes authenticate themselves at the data layer
+    //     (`getCurrentAccount()` / per-route `getUser()`), so a middleware
+    //     auth check here is a pure duplicate. `/api/whatsapp/*` routes each
+    //     return their own 401, and `/api/whatsapp/webhook` is public (Meta
+    //     calls it with an admin client) — so no gating is lost.
+    //   - `missing` prefetch headers: Next.js prefetches every in-viewport
+    //     `<Link>`, and each prefetch would otherwise fire its own
+    //     `getUser()`. Skipping prefetches removes the single largest
+    //     amplifier; the real navigation that follows still validates.
+    {
+      source: '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+      missing: [
+        { type: 'header', key: 'next-router-prefetch' },
+        { type: 'header', key: 'purpose', value: 'prefetch' },
+      ],
+    },
   ],
 }
