@@ -1,29 +1,19 @@
 <!-- template-managed: project/CLAUDE.md — edits here are yours; sync will diff, not clobber -->
 
-# Project AI Guide — wacrm
+# Project AI Guide
 
 This file is read automatically by Claude Code. It wires in the shared IdeasLab standards,
-roles, and workflows (under `.ai/`) plus this project's own context.
+roles, and workflows (synced under `.ai/`) plus this project's own context.
 
-> Keep this file thin. Shared rules live in `.ai/` (the ai-dev-template-library); project
-> facts live in `.ai/project-context.md` and `.ai/architecture.md`.
-
-## ⚠️ Stack-critical
-
-<!-- BEGIN:nextjs-agent-rules -->
-**This is NOT the Next.js you know.** This repo runs **Next.js 16**, which has breaking
-changes — APIs, conventions, and file structure may differ from your training data. Read the
-relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation
-notices.
-<!-- END:nextjs-agent-rules -->
+> Keep this file thin. Put shared rules in `.ai/` (managed by the template library) and
+> project-specific facts in `.ai/project-context.md` and `.ai/architecture.md`.
 
 ## Project context (project-owned)
 
 @.ai/project-context.md
 @.ai/architecture.md
-@.ai/stack-frontend-nextjs.md
 
-## Standards (shared — from ai-dev-template-library)
+## Standards (shared — synced from ai-dev-template-library)
 
 @.ai/standards/coding-standards.md
 @.ai/standards/git-conventions.md
@@ -38,13 +28,11 @@ notices.
 - Follow the matching **workflow** — see `.ai/workflows/`.
 - When context changes (new service, new decision), update `.ai/project-context.md` and
   `.ai/architecture.md`.
-- This repo is a **fork** of `ArnasDon/wacrm`: extend under fork-owned paths and avoid
-  patching upstream files so upstream merges stay clean.
 
 ## Golden rules
 
 1. Match the surrounding code. Read before you write.
 2. Tests ship with the change, not after.
-3. Never commit secrets. Validate input at boundaries; keep every query account-scoped (RLS).
+3. Never commit secrets. Validate input at boundaries.
 4. Small, single-purpose commits and PRs (Conventional Commits).
 5. Prefer the simplest thing that works — no speculative complexity.

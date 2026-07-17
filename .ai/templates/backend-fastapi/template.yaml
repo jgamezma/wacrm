@@ -1,0 +1,15 @@
+id: backend-fastapi
+name: Backend — FastAPI (Python)
+description: >
+  Python/FastAPI backend on top of the base project template. Adds FastAPI-specific
+  stack conventions and a Cursor rule for backend work.
+extends: project   # includes everything from templates/project first
+
+files:
+  - .ai/stack-backend-fastapi.md
+  - .cursor/rules/backend.mdc
+
+scaffold_only: []
+
+# No extra shared content beyond what `project` already pulls in.
+shared: {}

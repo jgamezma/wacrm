@@ -1,0 +1,20 @@
+---
+description: FastAPI backend conventions
+globs: ["app/**/*.py", "tests/**/*.py", "alembic/**/*.py"]
+alwaysApply: false
+---
+
+# FastAPI backend rules
+
+Read `.ai/stack-backend-fastapi.md` for full detail.
+
+- Layering: routers → services → repositories. Routers stay thin (HTTP only), never touch the DB.
+- Never return SQLAlchemy models from endpoints — map to Pydantic response schemas.
+- Async endpoints and async DB sessions; don't block the event loop.
+- Validate all input with Pydantic v2; raise typed domain errors mapped to HTTP handlers.
+- Config/secrets via Pydantic Settings from env — never hard-coded.
+- All schema changes through Alembic, backward-compatible.
+- Tests: pytest; unit-test services without a DB, integration-test routers with httpx.
+- Lint/format with ruff, types with mypy (strict) — must pass before commit.
+
+@.ai/stack-backend-fastapi.md
