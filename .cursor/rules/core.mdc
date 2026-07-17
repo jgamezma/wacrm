@@ -1,0 +1,24 @@
+---
+description: Core IdeasLab engineering rules (shared via ai-dev-template-library)
+alwaysApply: true
+---
+
+# Core rules
+
+Read the shared context under `.ai/` before working:
+- Standards: `.ai/standards/` (coding, git, api, database, testing, security)
+- Roles: `.ai/roles/` — adopt the one matching the task
+- Workflows: `.ai/workflows/` — follow the matching process
+- Project context: `.ai/project-context.md`, `.ai/architecture.md`
+
+## Golden rules
+
+1. Match the surrounding code style; read before writing.
+2. Tests ship with the change, including a failing test first for bug fixes.
+3. Never commit secrets; validate all input at boundaries.
+4. Small, single-purpose commits/PRs using Conventional Commits.
+5. Simplest solution that satisfies the requirement — no speculative complexity.
+6. Handle unhappy paths explicitly (not found, unauthorized, downstream failure).
+
+@.ai/standards/coding-standards.md
+@.ai/standards/security-guidelines.md

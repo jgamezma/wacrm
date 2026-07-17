@@ -1,0 +1,30 @@
+template: frontend-nextjs
+library_version: 1.0.0
+generated_at: 2026-07-16
+# managed files — do not edit by hand
+# FILE\t<dest>\t<version>\t<sha256>\t<scaffold>
+FILE	CLAUDE.md	1.0.0	152e7a55ec6be7eed789a111dd56615593d44239e3a2965760cf3596d41d046a	false
+FILE	AGENTS.md	1.0.0	48ed43ad8132883f01281f4ff060af52ab4b51afbd062e763470d3f1e82505f3	false
+FILE	.cursor/rules/core.mdc	1.0.0	d6efdb8e1adfa2eb754b458b6543432235e07b3317aac7406df9a5b5b0e5d80e	false
+FILE	.ai/project-context.md	1.0.0	f98290f619273431104d21ce2ce6ce9b8639f27958f1ea2773cafe25fe776038	true
+FILE	.ai/architecture.md	1.0.0	66ff6f70354c4aed391e42212b75b6e166064e774680a35da65799395a328b9b	true
+FILE	.ai/stack-frontend-nextjs.md	1.0.0	6d9950150839a9c24b8d453e33c14dd2cbbed4473e405ee9f656edcfee29542b	false
+FILE	.cursor/rules/frontend.mdc	1.0.0	8f3d74ea908a13d5b3fd043c6df977ef7e308ccdb3ac33e2c3fdfb475d5e3077	false
+FILE	.ai/standards/coding-standards.md	1.0.0	66079d825872b7e4ac456a33b82ceee534dd807bafd6f5ddc8db456c0edd36d9	false
+FILE	.ai/standards/git-conventions.md	1.0.0	808103904e5d74e50b9b39f2de167870944cd955256b3cab05d2ae481b96cfb2	false
+FILE	.ai/standards/api-guidelines.md	1.0.0	2f8cc8c54ad1e03f8426f6e74d04de8e7c5a59667586536b7154e4f6896d32b9	false
+FILE	.ai/standards/database-guidelines.md	1.0.0	10ae2f97f04b7f39eb80c7cc60189e969386a5ba16e20b3e7fec88676c6e26ea	false
+FILE	.ai/standards/testing-guidelines.md	1.0.0	75e8bb573b1fff0688f8eabc9eb92cce5ce4e179c8844ea791869fc9b328feb0	false
+FILE	.ai/standards/security-guidelines.md	1.0.0	ab97644ee48df7b76a12ae133d12548caff058bb41405106b9d3e49435345d94	false
+FILE	.ai/roles/software-architect.md	1.0.0	111174f6a13d2f906e60a2ce4c2f3c6b613dca7b4480e00f7ed0950ed09ae2ee	false
+FILE	.ai/roles/backend-developer.md	1.0.0	95cfa81f388ba0262047be89732dd3f0eb9aa5a874e7f994f8e3afeb79618e0e	false
+FILE	.ai/roles/frontend-developer.md	1.0.0	0e227dfaf52c9b9c9da3c7798dc8cb663ce600d476bad9d8cbe1067762daeec4	false
+FILE	.ai/roles/product-owner.md	1.0.0	bbdb2b9963d53f21bb173e290acd9b2a9626e603552847edce91b6de7bd6d05d	false
+FILE	.ai/roles/devops-engineer.md	1.0.0	d39b6e8f6b5476fd1206e85ea9af8c21c8c2c10655dc78b56e1694fe1537ef8d	false
+FILE	.ai/roles/qa-engineer.md	1.0.0	2d74198b559c1081e0ab2f608d7788c7f8122845cab078904a941718fc79b183	false
+FILE	.ai/roles/security-reviewer.md	1.0.0	32ea1aa094d796bf7542480fe84d952a9be376d06e3b793417c4eda1e103d570	false
+FILE	.ai/workflows/feature-development.md	1.0.0	cb13aecf3fc1142a85575aaa0300936d55fd1caad7ebebdb2ed6a757e7f8653a	false
+FILE	.ai/workflows/bug-fix.md	1.0.0	b93d71a4b8892d364e1b2a995593a976a65b523e20126c1b6734af9a237385cc	false
+FILE	.ai/workflows/code-review.md	1.0.0	1c276de3c6eb35471568f3f13bbf81cccee1eb60b6bd94332ed1362b99e3a818	false
+FILE	.ai/workflows/refactor.md	1.0.0	d4f09ca51a871c6e8ead8612fd4cd14302331aad23fcb46df43cb1085f778cb5	false
+FILE	.ai/workflows/deployment.md	1.0.0	598515cc9e509038e1efc2fc7b65313231c4f84f77d1ac1ae9d479682f605702	false

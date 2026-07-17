@@ -1,0 +1,13 @@
+id: frontend-nextjs
+name: Frontend — Next.js (TypeScript)
+description: >
+  Next.js (App Router) + TypeScript frontend on top of the base project template.
+  Adds Next.js-specific stack conventions and a Cursor rule for frontend work.
+extends: project
+
+files:
+  - .ai/stack-frontend-nextjs.md
+  - .cursor/rules/frontend.mdc
+
+scaffold_only: []
+shared: {}

@@ -1,20 +1,11 @@
-# AGENTS.md — wacrm
+# AGENTS.md
 
 Cross-tool agent instructions (the open standard read by Cursor and other agents).
 This mirrors `CLAUDE.md`; both point at the same shared content under `.ai/`.
 
-## ⚠️ Stack-critical
-
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
 ## Where the rules live
 
 - **Project context:** `.ai/project-context.md`, `.ai/architecture.md`
-- **Stack:** `.ai/stack-frontend-nextjs.md` (Next.js 16 + Supabase specifics)
 - **Standards:** `.ai/standards/` (coding, git, api, database, testing, security)
 - **Roles:** `.ai/roles/` — adopt the one matching the task
 - **Workflows:** `.ai/workflows/` — follow the matching process
@@ -25,10 +16,9 @@ Read the relevant files under `.ai/` before starting a task.
 
 1. Match the surrounding code style; read before writing.
 2. Tests ship with the change.
-3. Never commit secrets; validate input at boundaries; keep every query account-scoped (RLS).
+3. Never commit secrets; validate input at boundaries.
 4. Small, single-purpose commits and PRs using Conventional Commits.
 5. Simplest solution that satisfies the requirement — no speculative complexity.
-6. This repo is a **fork** of `ArnasDon/wacrm` — extend under fork-owned paths; don't patch upstream.
 
 ## Standards & workflows quick links
 

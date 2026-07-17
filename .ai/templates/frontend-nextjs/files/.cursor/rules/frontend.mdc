@@ -1,0 +1,20 @@
+---
+description: Next.js frontend conventions
+globs: ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts"]
+alwaysApply: false
+---
+
+# Next.js frontend rules
+
+Read `.ai/stack-frontend-nextjs.md` for full detail.
+
+- Server Components by default; add "use client" only when interactivity is required.
+- Fetch on the server where possible; React Query for client data/mutations.
+- Keep business logic out of components — extract to hooks/lib.
+- TypeScript strict; no `any` without a justifying comment; validate external data with zod.
+- Handle all async states: loading, empty, error, success.
+- Accessibility: semantic HTML, keyboard nav, visible focus, AA contrast.
+- No secrets client-side (only NEXT_PUBLIC_*); auth tokens in HttpOnly cookies.
+- Tests: vitest + Testing Library for units, Playwright for E2E. Lint + typecheck must pass.
+
+@.ai/stack-frontend-nextjs.md

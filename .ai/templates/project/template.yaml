@@ -1,0 +1,48 @@
+# Template manifest — read by scripts/sync-template.sh
+# Declares what this template ships into a project and which shared library
+# content it pulls in. Versions are stamped per-file at sync time.
+
+id: project
+name: Base project (stack-agnostic)
+description: >
+  The foundation every project gets: AI config files (CLAUDE.md, AGENTS.md,
+  Cursor rules) plus the shared standards, roles, and workflows copied under .ai/.
+extends: null   # base template; stack templates set this to "project"
+
+# Files copied verbatim from this template's files/ dir into the project root.
+files:
+  - CLAUDE.md
+  - AGENTS.md
+  - .cursor/rules/core.mdc
+  - .ai/project-context.md      # scaffold — filled in per project, never overwritten on update
+  - .ai/architecture.md         # scaffold — filled in per project, never overwritten on update
+
+# Files that are project-owned scaffolds: written once on init, never touched by update.
+scaffold_only:
+  - .ai/project-context.md
+  - .ai/architecture.md
+
+# Shared library content copied into the project's .ai/ tree and version-stamped.
+# These ARE updated by `sync update` (unless locally modified).
+shared:
+  standards:
+    - coding-standards.md
+    - git-conventions.md
+    - api-guidelines.md
+    - database-guidelines.md
+    - testing-guidelines.md
+    - security-guidelines.md
+  roles:
+    - software-architect.md
+    - backend-developer.md
+    - frontend-developer.md
+    - product-owner.md
+    - devops-engineer.md
+    - qa-engineer.md
+    - security-reviewer.md
+  workflows:
+    - feature-development.md
+    - bug-fix.md
+    - code-review.md
+    - refactor.md
+    - deployment.md

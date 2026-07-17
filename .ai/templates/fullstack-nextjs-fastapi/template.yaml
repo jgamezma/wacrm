@@ -1,0 +1,16 @@
+id: fullstack-nextjs-fastapi
+name: Fullstack — Next.js + FastAPI
+description: >
+  Monorepo with a Next.js frontend and a FastAPI backend on top of the base project
+  template. Ships both stack conventions, both Cursor rules, and a monorepo layout guide.
+extends: project
+
+files:
+  - .ai/stack-backend-fastapi.md
+  - .ai/stack-frontend-nextjs.md
+  - .ai/monorepo-layout.md
+  - .cursor/rules/backend.mdc
+  - .cursor/rules/frontend.mdc
+
+scaffold_only: []
+shared: {}
