@@ -1520,11 +1520,38 @@
       "fields": "Fields & tags",
       "deals": "Deals & currency",
       "members": "Team members",
-      "api": "API keys"
+      "api": "API keys",
+      "shop": "Shop"
     },
     "groups": {
       "account": "Account",
       "workspace": "Workspace"
+    },
+    "shop": {
+      "title": "Shop",
+      "description": "Link your commerce store so this workspace can read your inventory. One-click connect — no app credentials to paste.",
+      "cardTitle": "Shop connection",
+      "cardDesc": "Connect once to authorize inventory access. You can disconnect at any time.",
+      "statusConnected": "Connected",
+      "statusNotConnected": "Not connected",
+      "connectedVia": "Connected to {name} via {provider}",
+      "providerLabel": "Provider",
+      "shopDomainLabel": "Shop domain",
+      "shopDomainHint": "Your myshopify.com store — e.g. acme.myshopify.com (just the handle is fine).",
+      "domainRequired": "Enter your shop domain first.",
+      "connect": "Connect",
+      "disconnect": "Disconnect",
+      "disconnecting": "Disconnecting…",
+      "adminOnly": "Only admins and owners can change the shop connection.",
+      "notConfiguredTitle": "No shop provider is set up on this server",
+      "notConfiguredDesc": "An operator needs to configure a provider (e.g. set SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET, and SHOPIFY_REDIRECT_URI) before this workspace can connect.",
+      "disconnectConfirm": "This clears the stored shop credentials for this workspace. Continue?",
+      "connectedToast": "Shop connected.",
+      "disconnectedToast": "Shop disconnected.",
+      "deniedToast": "Authorization was cancelled.",
+      "errorToast": "Couldn't complete the connection. Please try again.",
+      "disconnectError": "Failed to disconnect.",
+      "loadError": "Failed to load shop status."
     },
     "profile": {
       "title": "Your profile",
