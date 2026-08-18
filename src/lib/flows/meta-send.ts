@@ -161,6 +161,9 @@ interface SendMediaEngineArgs {
   caption?: string
   /** Document-only; ignored by Meta for image/video. */
   filename?: string
+  /** Marks the persisted row `ai_generated = true` so the inbox badges it as
+   *  an AI reply — same flag `engineSendText` takes. */
+  aiGenerated?: boolean
 }
 
 /**
@@ -242,14 +245,19 @@ export async function engineSendMedia(
   // messages_content_type_check constraint (migration 001 + 010).
   // content_text carries the caption (or empty) so the conversation
   // list preview shows something meaningful when the user glances at it.
+  // `media_url` has to be stored too: the inbox bubble renders from the row,
+  // not from Meta, so without it an image that reached WhatsApp perfectly still
+  // shows as "Photo unavailable" to the agent.
   const preview = args.caption?.trim() || `[${args.kind}]`
   const { error: msgErr } = await db.from('messages').insert({
     conversation_id: args.conversationId,
     sender_type: 'bot',
     content_type: args.kind,
     content_text: args.caption ?? null,
+    media_url: args.link,
     message_id: waMessageId,
     status: 'sent',
+    ai_generated: args.aiGenerated ?? false,
   })
   if (msgErr) {
     throw new Error(`sent to Meta but DB insert failed: ${msgErr.message}`)

@@ -65,6 +65,8 @@ describe('sendProductCards', () => {
     expect(call.link).toBe('https://cdn.example.com/air.jpg');
     expect(call.caption).toContain('Air Runner');
     expect(call.caption).toContain('in stock (4)');
+    // Badged like the text reply, so the inbox marks the card as AI-sent.
+    expect(call.aiGenerated).toBe(true);
   });
 
   it('sends text when the account has images off', async () => {
