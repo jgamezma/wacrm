@@ -17,14 +17,38 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth/account';
+import { resolvePublicOrigin } from '@/lib/extensions/shop/base-url';
 import { SHOP_OAUTH_COOKIE } from '@/lib/extensions/shop/constants';
 import { getProvider } from '@/lib/extensions/shop/registry';
 import { upsertConnection } from '@/lib/extensions/shop/connection';
 
 type Outcome = 'connected' | 'denied' | 'error';
 
-function redirectToSettings(request: NextRequest, outcome: Outcome): NextResponse {
-  const url = new URL('/settings', request.url);
+/** Why a callback was rejected. Logged server-side only — never shown to the
+ *  browser, which just gets a generic `result=error`. */
+type FailureReason =
+  | 'provider_error'
+  | 'missing_cookie'
+  | 'unparsable_cookie'
+  | 'unknown_provider'
+  | 'bad_signature'
+  | 'state_mismatch'
+  | 'shop_mismatch'
+  | 'account_mismatch';
+
+function redirectToSettings(
+  request: NextRequest,
+  outcome: Outcome,
+  reason?: FailureReason,
+): NextResponse {
+  if (reason) {
+    // The browser only ever sees `result=error`; the operator needs to know
+    // which gate closed, so name it here.
+    console.warn('[shop callback] rejected:', reason);
+  }
+  // Build the redirect on the origin the *user* reached us on. `request.url`
+  // can be the container's bind address behind a proxy (e.g. 0.0.0.0:80).
+  const url = new URL('/settings', resolvePublicOrigin(request));
   url.searchParams.set('tab', 'shop');
   url.searchParams.set('result', outcome);
   const res = NextResponse.redirect(url);
@@ -38,11 +62,13 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
 
     // User declined at the provider, or the provider returned an error.
-    if (params.get('error')) return redirectToSettings(request, 'denied');
+    if (params.get('error')) {
+      return redirectToSettings(request, 'denied', 'provider_error');
+    }
 
     // The provider id lives in the cookie (shared callback URL) — read it first.
     const raw = request.cookies.get(SHOP_OAUTH_COOKIE)?.value;
-    if (!raw) return redirectToSettings(request, 'error');
+    if (!raw) return redirectToSettings(request, 'error', 'missing_cookie');
 
     let stored: {
       state?: string;
@@ -53,11 +79,11 @@ export async function GET(request: NextRequest) {
     try {
       stored = JSON.parse(raw);
     } catch {
-      return redirectToSettings(request, 'error');
+      return redirectToSettings(request, 'error', 'unparsable_cookie');
     }
 
     const provider = stored.provider ? getProvider(stored.provider) : null;
-    if (!provider) return redirectToSettings(request, 'error');
+    if (!provider) return redirectToSettings(request, 'error', 'unknown_provider');
 
     // Flatten the query for the provider's authenticity check.
     const query: Record<string, string> = {};
@@ -67,20 +93,20 @@ export async function GET(request: NextRequest) {
 
     // (1) Provider authenticity (e.g. Shopify HMAC).
     if (!provider.verifyCallback(query)) {
-      return redirectToSettings(request, 'error');
+      return redirectToSettings(request, 'error', 'bad_signature');
     }
 
     const state = params.get('state');
     // (2) CSRF: the state echoed back must match the one we minted.
     if (!state || !stored.state || stored.state !== state) {
-      return redirectToSettings(request, 'error');
+      return redirectToSettings(request, 'error', 'state_mismatch');
     }
 
     // (3a) Shop match, for domain-scoped providers.
     if (provider.requiresShopDomain) {
       const shopParam = provider.normalizeShopDomain(params.get('shop') ?? '');
       if (!shopParam || shopParam !== stored.shop) {
-        return redirectToSettings(request, 'error');
+        return redirectToSettings(request, 'error', 'shop_mismatch');
       }
     }
 
@@ -88,7 +114,7 @@ export async function GET(request: NextRequest) {
     // that started the flow is the account finishing it (no cross-account mix-up).
     const ctx = await requireRole('admin');
     if (ctx.accountId !== stored.accountId) {
-      return redirectToSettings(request, 'error');
+      return redirectToSettings(request, 'error', 'account_mismatch');
     }
 
     const result = await provider.completeConnection({
