@@ -68,6 +68,7 @@ export async function sendProductCards(
           kind: 'image',
           link: product.imageUrl!,
           caption,
+          aiGenerated: true,
         });
         results.push({ productId: product.id, outcome: 'image' });
         continue;
