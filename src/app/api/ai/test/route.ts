@@ -75,6 +75,8 @@ export async function POST(request: Request) {
         embeddingsApiKey: null,
         contextMessageLimit: 20,
         memoryAutowriteEnabled: false,
+        shopCatalogEnabled: true,
+        shopProductImagesEnabled: true,
       })
     } catch (err) {
       if (err instanceof AiError) {

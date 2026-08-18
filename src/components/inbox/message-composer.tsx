@@ -22,6 +22,7 @@ import {
   Plus,
   MessageSquareDashed,
   Zap,
+  Package,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GatedButton } from "@/components/ui/gated-button";
@@ -55,6 +56,11 @@ import {
 import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
+import {
+  ShopProductPicker,
+  ShopProductSuggestions,
+  type ShopProductSuggestion,
+} from "./shop-product-picker";
 
 /** Media content types an agent can send from the composer. */
 export type ComposerMediaKind = "image" | "video" | "document" | "audio";
@@ -154,6 +160,13 @@ export function MessageComposer({
     useState<InteractiveMessagePayload>(blankButtonsPayload);
   const [savingQuickReply, setSavingQuickReply] = useState(false);
   const [quickReplyOpen, setQuickReplyOpen] = useState(false);
+
+  // Shop catalog (fork extension — spec 003 US-6): the searchable picker, plus
+  // the products the last AI draft was grounded in.
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
+  const [suggestedProducts, setSuggestedProducts] = useState<
+    ShopProductSuggestion[]
+  >([]);
 
   // Media attachment state. `draft` holds an uploaded-but-not-yet-sent
   // attachment; `busy` covers the upload/transcode window.
@@ -275,6 +288,11 @@ export function MessageComposer({
         }
         return;
       }
+      // Products the same retrieval surfaced. Offered next to the draft rather
+      // than auto-sent: images from a draft are always the agent's call.
+      setSuggestedProducts(
+        Array.isArray(data.products) ? (data.products as ShopProductSuggestion[]) : [],
+      );
       const draftText = typeof data.draft === "string" ? data.draft.trim() : "";
       if (!draftText) {
         toast.error("The assistant didn't return a reply.");
@@ -297,6 +315,36 @@ export function MessageComposer({
       setDrafting(false);
     }
   }, [drafting, conversationId, adjustHeight]);
+
+  // Send a catalog product as plain text. The caption comes from the server, so
+  // an agent's send reads exactly like the AI's card would.
+  const sendProductAsText = useCallback(
+    (product: ShopProductSuggestion) => {
+      onSend(product.caption, replyTo?.id);
+      setProductPickerOpen(false);
+      onClearReply?.();
+    },
+    [onSend, replyTo, onClearReply],
+  );
+
+  // Send it as a photo + caption. The URL is the shop's own CDN link, not an
+  // upload of ours — hence the empty storage `path`: there is no object of ours
+  // to garbage-collect if the send fails.
+  const sendProductWithImage = useCallback(
+    (product: ShopProductSuggestion) => {
+      if (!product.image_url) return;
+      onSendMedia({
+        kind: "image",
+        mediaUrl: product.image_url,
+        path: "",
+        caption: product.caption,
+        replyToId: replyTo?.id,
+      });
+      setProductPickerOpen(false);
+      onClearReply?.();
+    },
+    [onSendMedia, replyTo, onClearReply],
+  );
 
   // ---- Interactive message + quick replies --------------------------
 
@@ -595,6 +643,14 @@ export function MessageComposer({
         }}
       />
 
+      {/* Products the last AI draft was grounded in (fork extension). */}
+      <ShopProductSuggestions
+        products={suggestedProducts}
+        onSendText={sendProductAsText}
+        onSendImage={sendProductWithImage}
+        onDismiss={() => setSuggestedProducts([])}
+      />
+
       {draft ? (
         <MediaDraftPreview
           draft={draft}
@@ -693,6 +749,10 @@ export function MessageComposer({
               <DropdownMenuItem onClick={() => setQuickReplyOpen(true)}>
                 <Zap className="mr-2 h-4 w-4" />
                 {t("quickReplies")}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setProductPickerOpen(true)}>
+                <Package className="mr-2 h-4 w-4" />
+                {t("products")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -810,6 +870,14 @@ export function MessageComposer({
         open={quickReplyOpen}
         onOpenChange={setQuickReplyOpen}
         onPick={handlePickQuickReply}
+      />
+
+      {/* Shop catalog picker (fork extension). */}
+      <ShopProductPicker
+        open={productPickerOpen}
+        onOpenChange={setProductPickerOpen}
+        onSendText={sendProductAsText}
+        onSendImage={sendProductWithImage}
       />
     </div>
   );

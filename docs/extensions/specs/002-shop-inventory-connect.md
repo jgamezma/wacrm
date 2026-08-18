@@ -27,7 +27,7 @@ connect, no stored credentials, no inventory visibility.
 - Full product catalog sync UI or stock management inside the inbox.
 - Mapping Shopify items to WhatsApp templates, deals, or broadcasts.
 - Multi-Shopify-store-per-tenant (one connection per account in v1).
-- Using Shopify data in the AI reply assistant (can follow once connect is stable).
+- Using shop catalog data in the AI reply assistant — follow-up: [003 — Shop catalog as agent knowledge](./003-shop-catalog-agent-knowledge.md) (provider-agnostic; Shopify first).
 - Public REST API / MCP exposure of Shopify inventory.
 
 ## 4. User stories
@@ -228,3 +228,4 @@ validation), `registry.ts` (known/configured providers), `connection.ts`
 | 2026-07-16 | Corrected integration target to Shopify. v1 remains connect-only with OAuth, account-scoped encrypted tokens, admin+ settings access, and minimal inventory-read scopes to be confirmed before inventory API work. |
 | 2026-08-18 | Callback hardening + fixes from the first live install: (a) user-facing redirects are built on the resolved public origin (`NEXT_PUBLIC_SITE_URL` → proxy headers → Host) instead of `request.url`, which behind EasyPanel's proxy pointed at the container bind address (`https://0.0.0.0:80/settings`); (b) each rejection now logs a reason code server-side while the browser still only sees `result=error`; (c) the strict typed-domain == callback-domain check became a reconciliation — the provider's signed canonical domain wins, since a dev store named `otraprueba-2` answers as `1f3m3k-vt.myshopify.com` and users cannot guess that handle. |
 | 2026-07-17 | Generalized to a **provider-agnostic shop connector** (Shopify is the first provider) so WooCommerce/others can be added without rewriting routes, DB, or UI. Renamed the generic surface to `shop`: table `shop_connections` (with a `provider` column), routes `/api/extensions/shop/*`, lib `src/lib/extensions/shop/` (`ShopProvider` contract + `registry` + `providers/shopify.ts`), settings section **Shop** with a provider picker. Shopify OAuth specifics (HMAC-verified callback, `<shop>.myshopify.com` validation, offline token) live in the Shopify provider. Spec filename kept as-is; consider renaming to `002-shop-inventory-connect.md`. |
+| 2026-08-18 | Connect is live; using catalog/inventory in agents is specified in [003](./003-shop-catalog-agent-knowledge.md) (provider-agnostic catalog contract; Shopify first). |

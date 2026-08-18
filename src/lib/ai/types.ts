@@ -37,6 +37,15 @@ export interface AiConfig {
    *  memory when it ends (agent close / auto-reply handoff). Opt-in;
    *  off by default. Fork extension — see ai-memory spec §7.2. */
   memoryAutowriteEnabled: boolean
+  /** When true, replies are grounded in the connected shop's catalog
+   *  (products/prices/stock retrieved per question). On by default, but
+   *  only has an effect while a shop is connected. Fork extension — see
+   *  shop-catalog spec §7.3. */
+  shopCatalogEnabled: boolean
+  /** When true, an auto-reply may send a product as a WhatsApp image +
+   *  caption instead of text. Requires `shopCatalogEnabled`. Fork
+   *  extension — see shop-catalog spec US-3/US-4. */
+  shopProductImagesEnabled: boolean
 }
 
 /** A single conversation turn in the shape both providers accept. */

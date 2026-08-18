@@ -16,11 +16,13 @@
 // Spec: docs/extensions/specs/002-shop-inventory-connect.md §7.1, §10
 // ============================================================
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { after, type NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth/account';
 import { resolvePublicOrigin } from '@/lib/extensions/shop/base-url';
+import { shopAdminClient } from '@/lib/extensions/shop/admin-client';
 import { resolveCallbackShopDomain } from '@/lib/extensions/shop/callback-shop';
+import { syncShopCatalog } from '@/lib/extensions/shop/sync';
 import { SHOP_OAUTH_COOKIE } from '@/lib/extensions/shop/constants';
 import { getProvider } from '@/lib/extensions/shop/registry';
 import { upsertConnection } from '@/lib/extensions/shop/connection';
@@ -146,6 +148,22 @@ export async function GET(request: NextRequest) {
       displayName: result.displayName,
       accessToken: result.accessToken,
       scopes: result.scopes,
+    });
+
+    // First catalog pull, so a freshly connected shop is usable without the
+    // operator hunting for a Sync button (spec 003 §7.2 trigger 1). Handed to
+    // `after()` — the redirect must not wait on it, and it must not be a
+    // detached promise the runtime can kill mid-flight. Best-effort by
+    // contract: `syncShopCatalog` records its own failures on the connection
+    // row and never throws.
+    const connectedAccountId = ctx.accountId;
+    after(async () => {
+      const result = await syncShopCatalog(shopAdminClient(), connectedAccountId);
+      if (!result.ok) {
+        console.warn(
+          `[shop callback] first catalog sync did not complete: ${result.error}`,
+        );
+      }
     });
 
     return redirectToSettings(request, 'connected');

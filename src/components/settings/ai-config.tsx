@@ -74,6 +74,10 @@ export function AiConfig() {
   const [maxPerConversation, setMaxPerConversation] = useState(3);
   const [contextMessages, setContextMessages] = useState(20);
   const [memoryAutowrite, setMemoryAutowrite] = useState(false);
+  // Shop-catalog grounding + product images default ON (fork migration 9004);
+  // they only have an effect while a shop is connected.
+  const [shopCatalog, setShopCatalog] = useState(true);
+  const [shopProductImages, setShopProductImages] = useState(true);
   // Empty string = leave unassigned (shared queue).
   const [handoffAgentId, setHandoffAgentId] = useState('');
   const [members, setMembers] = useState<AccountMember[]>([]);
@@ -103,6 +107,8 @@ export function AiConfig() {
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
         setContextMessages(data.context_message_limit ?? 20);
         setMemoryAutowrite(Boolean(data.memory_autowrite_enabled));
+        setShopCatalog(data.shop_catalog_enabled !== false);
+        setShopProductImages(data.shop_product_images_enabled !== false);
         setHandoffAgentId(data.handoff_agent_id ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
@@ -156,6 +162,8 @@ export function AiConfig() {
     auto_reply_max_per_conversation: maxPerConversation,
     context_message_limit: contextMessages,
     memory_autowrite_enabled: memoryAutowrite,
+    shop_catalog_enabled: shopCatalog,
+    shop_product_images_enabled: shopProductImages,
     handoff_agent_id: handoffAgentId || null,
   });
 
@@ -498,6 +506,41 @@ export function AiConfig() {
                 checked={memoryAutowrite}
                 onCheckedChange={setMemoryAutowrite}
                 disabled={disabled}
+              />
+            </div>
+
+            {/* Shop catalog (fork extension — spec 003 US-4). The image switch
+                is nested under the catalog one: without catalog grounding there
+                is no product to photograph. */}
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {t('shopCatalog')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('shopCatalogDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={shopCatalog}
+                onCheckedChange={setShopCatalog}
+                disabled={disabled}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {t('shopProductImages')}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t('shopProductImagesDesc')}
+                </p>
+              </div>
+              <Switch
+                checked={shopProductImages}
+                onCheckedChange={setShopProductImages}
+                disabled={disabled || !shopCatalog}
               />
             </div>
 

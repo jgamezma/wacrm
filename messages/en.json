@@ -202,7 +202,8 @@
       "send": "Send",
       "quickReplyNamePrompt": "Name this quick reply:",
       "quickReplySaved": "Saved as a quick reply.",
-      "quickReplySaveError": "Couldn't save the quick reply."
+      "quickReplySaveError": "Couldn't save the quick reply.",
+      "products": "Products"
     },
     "bubble": {
       "photo": "Photo",
@@ -272,6 +273,16 @@
       "resumed": "AI resumed.",
       "updateError": "Couldn’t update the AI assistant.",
       "networkError": "Couldn’t reach the server."
+    },
+    "products": {
+      "title": "Send a product",
+      "searchPlaceholder": "Search products by name or SKU…",
+      "empty": "No products found. Sync the catalog in Settings → Shop.",
+      "sendAsText": "Send as text",
+      "sendWithImage": "Send with photo",
+      "noImage": "This product has no photo",
+      "suggested": "Products the assistant found",
+      "dismiss": "Dismiss"
     }
   },
   "Contacts": {
@@ -1551,7 +1562,24 @@
       "deniedToast": "Authorization was cancelled.",
       "errorToast": "Couldn't complete the connection. Please try again.",
       "disconnectError": "Failed to disconnect.",
-      "loadError": "Failed to load shop status."
+      "loadError": "Failed to load shop status.",
+      "catalogTitle": "Product catalog",
+      "catalogDesc": "Your store's products are cached here so the AI assistant can answer with real names, prices, and stock — and so agents can send a product from the inbox.",
+      "capabilitiesLabel": "What this connection can read",
+      "capProducts": "Products",
+      "capInventory": "Stock levels",
+      "scopesLabel": "Granted scopes: {scopes}",
+      "reconnectTitle": "Stock levels are not available",
+      "reconnectDesc": "This connection was authorized without inventory access, so replies can say whether an item is in stock but never how many. Reconnect to grant it — stored credentials cannot gain access on their own.",
+      "reconnect": "Reconnect",
+      "syncErrorTitle": "Last catalog sync failed",
+      "productsCached": "{count} products cached",
+      "lastSync": "Last synced {when}",
+      "neverSynced": "Never synced yet",
+      "syncNow": "Sync catalog",
+      "syncing": "Syncing…",
+      "syncSuccess": "Catalog synced — {count} products.",
+      "syncFailed": "Catalog sync failed: {reason}"
     },
     "profile": {
       "title": "Your profile",
@@ -1701,6 +1729,10 @@
       "contextMessagesDesc": "How many recent messages the assistant reads for context when drafting or auto-replying (5–100). More gives continuity; fewer cuts cost and latency.",
       "memoryAutowrite": "Auto-save conversation memory",
       "memoryAutowriteDesc": "When a conversation is closed, the AI summarises it into that contact's memory (durable facts, saved as AI-suggested). Off by default — uses your provider key.",
+      "shopCatalog": "Use the shop catalog",
+      "shopCatalogDesc": "Ground replies in the connected store: matching products, prices, and availability are retrieved for each question. No effect while no shop is connected.",
+      "shopProductImages": "Send product photos",
+      "shopProductImagesDesc": "Let an auto-reply send a matching product as a photo with a caption. Products without a photo are sent as text.",
       "handoffTo": "Hand off to",
       "handoffToDesc": "When the bot can’t help — or hits the reply cap — it pauses and routes the chat here, with a short note on what happened.",
       "handoffQueue": "Unassigned queue (any agent can pick it up)",

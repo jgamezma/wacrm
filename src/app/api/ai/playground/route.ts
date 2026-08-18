@@ -5,6 +5,11 @@ import { loadAiConfig } from '@/lib/ai/config'
 import { retrieveKnowledge } from '@/lib/ai/knowledge'
 import { generateReply } from '@/lib/ai/generate'
 import { buildSystemPrompt } from '@/lib/ai/defaults'
+import { loadShopCatalog } from '@/lib/extensions/shop/agent'
+import {
+  appendCatalogToPrompt,
+  parseProductTrailer,
+} from '@/lib/extensions/shop/catalog'
 import { latestUserMessage } from '@/lib/ai/query'
 import { AiError, type ChatMessage } from '@/lib/ai/types'
 
@@ -78,13 +83,31 @@ export async function POST(request: Request) {
       config,
       latestUserMessage(messages),
     )
-    const systemPrompt = buildSystemPrompt({
-      userPrompt: config.systemPrompt,
-      mode: 'auto_reply',
-      knowledge,
+    // Same catalog grounding the real auto-reply gets, so the Playground
+    // reflects what a customer would actually be told.
+    const catalogProducts = await loadShopCatalog(supabase, accountId, {
+      catalogEnabled: config.shopCatalogEnabled,
+      embeddingsApiKey: config.embeddingsApiKey,
+      queryText: latestUserMessage(messages),
     })
 
-    const { text, handoff } = await generateReply({ config, systemPrompt, messages })
+    const systemPrompt = appendCatalogToPrompt(
+      buildSystemPrompt({
+        userPrompt: config.systemPrompt,
+        mode: 'auto_reply',
+        knowledge,
+      }),
+      // No cards are sent from the Playground, so don't teach the trailer —
+      // but strip it below in case the model produces one regardless.
+      { products: catalogProducts },
+    )
+
+    const { text: rawText, handoff } = await generateReply({
+      config,
+      systemPrompt,
+      messages,
+    })
+    const { text } = parseProductTrailer(rawText)
     return NextResponse.json({ reply: text, handoff })
   } catch (err) {
     if (err instanceof AiError) {

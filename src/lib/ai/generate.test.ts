@@ -15,6 +15,8 @@ function config(overrides: Partial<AiConfig> = {}): AiConfig {
     embeddingsApiKey: null,
     contextMessageLimit: 20,
     memoryAutowriteEnabled: false,
+    shopCatalogEnabled: true,
+    shopProductImagesEnabled: true,
     ...overrides,
   }
 }
