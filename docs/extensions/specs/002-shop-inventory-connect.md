@@ -184,6 +184,12 @@ validation), `registry.ts` (known/configured providers), `connection.ts`
 - OAuth `state` must bind account + user session + shop domain; reject CSRF /
   account mix-ups.
 - Validate and normalize Shopify shop domains before redirecting.
+- On the callback, the shop domain the provider reports (HMAC-signed, so not
+  attacker-controlled) is the one used for the token exchange — it may
+  legitimately differ from the domain the user typed (aliases, renamed stores,
+  dev-store handles). It must still normalize to a canonical host; anything else
+  is rejected. Account binding is enforced by `state` + cookie + account id, not
+  by the domain (`src/lib/extensions/shop/callback-shop.ts`).
 - Never log access tokens; never expose them to the client.
 - Encrypt tokens at rest; restrict connect/disconnect to **admin+**.
 - Minimal Shopify scopes — inventory read only for v1.
@@ -220,4 +226,5 @@ validation), `registry.ts` (known/configured providers), `connection.ts`
 | 2026-07-16 | Store under `docs/extensions/specs/`; code under `src/lib/extensions/shopify/`. |
 | 2026-07-16 | Owner set to **SGC & IdeasLab (co-creation)**. |
 | 2026-07-16 | Corrected integration target to Shopify. v1 remains connect-only with OAuth, account-scoped encrypted tokens, admin+ settings access, and minimal inventory-read scopes to be confirmed before inventory API work. |
+| 2026-08-18 | Callback hardening + fixes from the first live install: (a) user-facing redirects are built on the resolved public origin (`NEXT_PUBLIC_SITE_URL` → proxy headers → Host) instead of `request.url`, which behind EasyPanel's proxy pointed at the container bind address (`https://0.0.0.0:80/settings`); (b) each rejection now logs a reason code server-side while the browser still only sees `result=error`; (c) the strict typed-domain == callback-domain check became a reconciliation — the provider's signed canonical domain wins, since a dev store named `otraprueba-2` answers as `1f3m3k-vt.myshopify.com` and users cannot guess that handle. |
 | 2026-07-17 | Generalized to a **provider-agnostic shop connector** (Shopify is the first provider) so WooCommerce/others can be added without rewriting routes, DB, or UI. Renamed the generic surface to `shop`: table `shop_connections` (with a `provider` column), routes `/api/extensions/shop/*`, lib `src/lib/extensions/shop/` (`ShopProvider` contract + `registry` + `providers/shopify.ts`), settings section **Shop** with a provider picker. Shopify OAuth specifics (HMAC-verified callback, `<shop>.myshopify.com` validation, offline token) live in the Shopify provider. Spec filename kept as-is; consider renaming to `002-shop-inventory-connect.md`. |

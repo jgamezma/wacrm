@@ -78,8 +78,8 @@ export interface ShopProvider {
 
   /**
    * Exchange a verified callback for a credential + shop metadata. `shopDomain`
-   * is the trusted value from the OAuth cookie (already cross-checked against
-   * the callback query by the route).
+   * is the canonical, validated host the route resolved for this callback —
+   * normally the one the provider itself reported (see `callback-shop.ts`).
    */
   completeConnection(input: {
     query: Record<string, string>;

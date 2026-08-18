@@ -5,7 +5,9 @@
 // URL is shared across providers). Gates before we trust the callback:
 //   (1) the provider's own authenticity check (e.g. Shopify HMAC),
 //   (2) the CSRF `state` must match the cookie set by /connect,
-//   (3) the shop + account must match what started the flow.
+//   (3) the account must match what started the flow, and the shop domain the
+//       provider reports must be a valid host (it may legitimately differ from
+//       the one the user typed — see `callback-shop.ts`).
 // Then the provider exchanges the code for a credential + shop metadata; we
 // encrypt + store it and redirect back to Settings with a `?result=` outcome
 // the UI turns into a toast. Failures redirect with `result=error` rather than
@@ -18,6 +20,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { requireRole } from '@/lib/auth/account';
 import { resolvePublicOrigin } from '@/lib/extensions/shop/base-url';
+import { resolveCallbackShopDomain } from '@/lib/extensions/shop/callback-shop';
 import { SHOP_OAUTH_COOKIE } from '@/lib/extensions/shop/constants';
 import { getProvider } from '@/lib/extensions/shop/registry';
 import { upsertConnection } from '@/lib/extensions/shop/connection';
@@ -33,7 +36,7 @@ type FailureReason =
   | 'unknown_provider'
   | 'bad_signature'
   | 'state_mismatch'
-  | 'shop_mismatch'
+  | 'invalid_shop'
   | 'account_mismatch';
 
 function redirectToSettings(
@@ -104,19 +107,23 @@ export async function GET(request: NextRequest) {
       return redirectToSettings(request, 'error', 'state_mismatch');
     }
 
-    // (3a) Shop match, for domain-scoped providers. A mismatch is almost always
-    // a typo'd domain (or a different store than the one the flow started on),
-    // so log both sides — the domain is not a secret.
-    if (provider.requiresShopDomain) {
-      const rawShop = params.get('shop') ?? '';
-      const shopParam = provider.normalizeShopDomain(rawShop);
-      if (!shopParam || shopParam !== stored.shop) {
-        return redirectToSettings(request, 'error', 'shop_mismatch', {
-          startedWith: stored.shop,
-          callbackShop: rawShop,
-          normalized: shopParam,
-        });
-      }
+    // (3a) Which store are we completing for? The provider's (signed) domain
+    // wins over the typed one; it just has to be a valid host.
+    const rawShop = params.get('shop') ?? '';
+    const resolvedShop = resolveCallbackShopDomain(provider, rawShop, stored.shop ?? null);
+    if (!resolvedShop.ok) {
+      return redirectToSettings(request, 'error', 'invalid_shop', {
+        startedWith: stored.shop,
+        callbackShop: rawShop,
+      });
+    }
+    if (resolvedShop.canonicalized) {
+      // Not an error: the store's canonical domain differs from what the user
+      // typed (aliases, renamed stores, dev-store handles). Worth a trace.
+      console.warn('[shop callback] using provider canonical shop domain:', {
+        startedWith: stored.shop,
+        using: resolvedShop.shopDomain,
+      });
     }
 
     // Re-resolve the session and enforce admin+; then (3b) verify the account
@@ -128,7 +135,7 @@ export async function GET(request: NextRequest) {
 
     const result = await provider.completeConnection({
       query,
-      shopDomain: stored.shop ?? null,
+      shopDomain: resolvedShop.shopDomain,
     });
 
     await upsertConnection(ctx.supabase, {
