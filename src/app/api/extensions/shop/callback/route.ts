@@ -40,11 +40,13 @@ function redirectToSettings(
   request: NextRequest,
   outcome: Outcome,
   reason?: FailureReason,
+  detail?: Record<string, unknown>,
 ): NextResponse {
   if (reason) {
     // The browser only ever sees `result=error`; the operator needs to know
-    // which gate closed, so name it here.
-    console.warn('[shop callback] rejected:', reason);
+    // which gate closed, so name it here. `detail` carries non-secret context
+    // (shop domains, never tokens/codes) so a misconfig is diagnosable.
+    console.warn('[shop callback] rejected:', reason, detail ?? '');
   }
   // Build the redirect on the origin the *user* reached us on. `request.url`
   // can be the container's bind address behind a proxy (e.g. 0.0.0.0:80).
@@ -102,11 +104,18 @@ export async function GET(request: NextRequest) {
       return redirectToSettings(request, 'error', 'state_mismatch');
     }
 
-    // (3a) Shop match, for domain-scoped providers.
+    // (3a) Shop match, for domain-scoped providers. A mismatch is almost always
+    // a typo'd domain (or a different store than the one the flow started on),
+    // so log both sides — the domain is not a secret.
     if (provider.requiresShopDomain) {
-      const shopParam = provider.normalizeShopDomain(params.get('shop') ?? '');
+      const rawShop = params.get('shop') ?? '';
+      const shopParam = provider.normalizeShopDomain(rawShop);
       if (!shopParam || shopParam !== stored.shop) {
-        return redirectToSettings(request, 'error', 'shop_mismatch');
+        return redirectToSettings(request, 'error', 'shop_mismatch', {
+          startedWith: stored.shop,
+          callbackShop: rawShop,
+          normalized: shopParam,
+        });
       }
     }
 
