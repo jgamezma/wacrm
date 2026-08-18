@@ -8,6 +8,9 @@ const h = vi.hoisted(() => ({
   retrieveKnowledge: vi.fn(),
   generateReply: vi.fn(),
   engineSendText: vi.fn(),
+  engineSendMedia: vi.fn(),
+  loadShopCatalog: vi.fn(),
+  sendProductCards: vi.fn(),
   state: {
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
@@ -21,7 +24,19 @@ vi.mock('./config', () => ({ loadAiConfig: h.loadAiConfig }))
 vi.mock('./context', () => ({ buildConversationContext: h.buildConversationContext }))
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 vi.mock('./generate', () => ({ generateReply: h.generateReply }))
-vi.mock('@/lib/flows/meta-send', () => ({ engineSendText: h.engineSendText }))
+vi.mock('@/lib/flows/meta-send', () => ({
+  engineSendText: h.engineSendText,
+  engineSendMedia: h.engineSendMedia,
+}))
+// Shop catalog (fork extension). `resolveCitedProducts` stays real — it is the
+// guard that keeps an id the model never saw from becoming a send.
+vi.mock('@/lib/extensions/shop/agent', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/extensions/shop/agent')>()),
+  loadShopCatalog: h.loadShopCatalog,
+}))
+vi.mock('@/lib/extensions/shop/product-send', () => ({
+  sendProductCards: h.sendProductCards,
+}))
 vi.mock('@/lib/extensions/ai-memory/memory', () => ({
   loadContactMemory: vi.fn().mockResolvedValue([]),
 }))
@@ -82,6 +97,8 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     embeddingsApiKey: null,
     contextMessageLimit: 20,
     memoryAutowriteEnabled: false,
+    shopCatalogEnabled: true,
+    shopProductImagesEnabled: true,
     ...overrides,
   }
 }
@@ -101,6 +118,108 @@ beforeEach(() => {
   h.retrieveKnowledge.mockResolvedValue([])
   h.generateReply.mockResolvedValue({ text: 'Hello!', handoff: false })
   h.engineSendText.mockResolvedValue({ whatsapp_message_id: 'm1' })
+  h.loadShopCatalog.mockResolvedValue([])
+  h.sendProductCards.mockReset().mockResolvedValue([])
+})
+
+// --- shop catalog (fork extension — spec 003) --------------------------------
+
+const CATALOG_PRODUCT = {
+  id: 'prod-1',
+  title: 'Air Runner',
+  description: null,
+  productType: null,
+  vendor: null,
+  imageUrl: 'https://cdn.example.com/air.jpg',
+  variants: [],
+}
+
+describe('dispatchInboundToAiReply — shop catalog', () => {
+  it('grounds the reply in matching products and teaches the card protocol', async () => {
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    await dispatchInboundToAiReply(ARGS)
+
+    // Live stock is refreshed here: this reply is about to reach the customer.
+    expect(h.loadShopCatalog).toHaveBeenCalledWith(
+      expect.anything(),
+      'acct-1',
+      expect.objectContaining({ catalogEnabled: true, liveInventory: true }),
+    )
+    const systemPrompt = h.generateReply.mock.calls[0][0].systemPrompt as string
+    expect(systemPrompt).toContain('Air Runner')
+    expect(systemPrompt).toContain('[[PRODUCTS]]')
+  })
+
+  it('strips the trailer from the message and sends the cited cards after it', async () => {
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: 'Yes, we have it!\n\n[[PRODUCTS]]\n{"ids":["prod-1"],"with_images":true}',
+      handoff: false,
+    })
+
+    await dispatchInboundToAiReply(ARGS)
+
+    // The control phrase must never reach a customer.
+    const sent = h.engineSendText.mock.calls[0][0].text as string
+    expect(sent).toBe('Yes, we have it!')
+    expect(sent).not.toContain('[[PRODUCTS]]')
+
+    expect(h.sendProductCards).toHaveBeenCalledWith(
+      expect.objectContaining({
+        products: [CATALOG_PRODUCT],
+        withImages: true,
+      }),
+    )
+  })
+
+  it('honours the account image toggle even when the model asked for photos', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ shopProductImagesEnabled: false }))
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: 'Sure.\n[[PRODUCTS]]\n{"ids":["prod-1"],"with_images":true}',
+      handoff: false,
+    })
+
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.sendProductCards).toHaveBeenCalledWith(
+      expect.objectContaining({ withImages: false }),
+    )
+  })
+
+  it('drops ids that were never retrieved', async () => {
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: 'Sure.\n[[PRODUCTS]]\n{"ids":["someone-elses-product"]}',
+      handoff: false,
+    })
+
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalled()
+    expect(h.sendProductCards).not.toHaveBeenCalled()
+  })
+
+  it('sends no cards when the model hands off', async () => {
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: '[[PRODUCTS]]\n{"ids":["prod-1"]}',
+      handoff: true,
+    })
+
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.sendProductCards).not.toHaveBeenCalled()
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
+  it('skips the catalog entirely when the account turned it off', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ shopCatalogEnabled: false }))
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.loadShopCatalog).toHaveBeenCalledWith(
+      expect.anything(),
+      'acct-1',
+      expect.objectContaining({ catalogEnabled: false }),
+    )
+    expect(h.sendProductCards).not.toHaveBeenCalled()
+  })
 })
 
 describe('dispatchInboundToAiReply — eligibility gates', () => {

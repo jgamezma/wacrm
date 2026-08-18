@@ -6,6 +6,7 @@ Feature specifications for IdeasLab fork extensions.
 |------|--------|---------|
 | [001 — AI agent memory](./001-ai-agent-memory.md) | Implemented | Contact-scoped memory in Supabase + configurable conversation context window |
 | [002 — Shop inventory connect](./002-shop-inventory-connect.md) | Implemented | Provider-agnostic shop connector (Shopify first): one-click OAuth connect / disconnect for inventory access (migration `9003`) |
+| [003 — Shop catalog as agent knowledge](./003-shop-catalog-agent-knowledge.md) | Implemented | Provider-agnostic catalog (Shopify first): products + inventory as AI/inbox knowledge; show matches with or without image (migration `9004`) |
 
 ## Naming
 

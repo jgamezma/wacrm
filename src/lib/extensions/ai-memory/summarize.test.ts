@@ -62,6 +62,8 @@ function cfg(overrides: Partial<AiConfig> = {}): AiConfig {
     embeddingsApiKey: null,
     contextMessageLimit: 20,
     memoryAutowriteEnabled: true,
+    shopCatalogEnabled: true,
+    shopProductImagesEnabled: true,
     ...overrides,
   }
 }

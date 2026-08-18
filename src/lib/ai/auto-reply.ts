@@ -8,6 +8,9 @@ import { buildHandoffSummary } from './handoff'
 import { logAiUsage } from './usage'
 import { latestUserMessage } from './query'
 import { loadContactMemory } from '@/lib/extensions/ai-memory/memory'
+import { loadShopCatalog, resolveCitedProducts } from '@/lib/extensions/shop/agent'
+import { appendCatalogToPrompt, parseProductTrailer } from '@/lib/extensions/shop/catalog'
+import { sendProductCards } from '@/lib/extensions/shop/product-send'
 import { engineSendText } from '@/lib/flows/meta-send'
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit'
 
@@ -114,18 +117,38 @@ export async function dispatchInboundToAiReply(
     // Durable per-contact memory (best-effort — never throws here).
     const memory = await loadContactMemory(db, accountId, contactId)
 
-    const systemPrompt = buildSystemPrompt({
-      userPrompt: config.systemPrompt,
-      mode: 'auto_reply',
-      knowledge,
-      memory,
+    // Products from the connected shop that match what the customer asked
+    // (best-effort — [] when nothing is connected, the toggle is off, or the
+    // question isn't about a product). Stock for the matches is refreshed live
+    // here because this reply is about to go out to the customer.
+    const catalogProducts = await loadShopCatalog(db, accountId, {
+      catalogEnabled: config.shopCatalogEnabled,
+      embeddingsApiKey: config.embeddingsApiKey,
+      queryText: latestUserMessage(messages),
+      liveInventory: true,
     })
 
-    const { text, handoff, usage } = await generateReply({
+    const systemPrompt = appendCatalogToPrompt(
+      buildSystemPrompt({
+        userPrompt: config.systemPrompt,
+        mode: 'auto_reply',
+        knowledge,
+        memory,
+      }),
+      { products: catalogProducts, allowProductCards: true },
+    )
+
+    const { text: rawText, handoff, usage } = await generateReply({
       config,
       systemPrompt,
       messages,
     })
+
+    // Split the reply from its `[[PRODUCTS]]` trailer. Stripping happens
+    // whether or not cards end up being sent — a control phrase must never
+    // reach a customer.
+    const trailer = parseProductTrailer(rawText)
+    const text = trailer.text
 
     // Record token spend on the account's BYO key. Fire-and-forget so it
     // never adds latency to the customer-facing send: `logAiUsage`
@@ -196,6 +219,22 @@ export async function dispatchInboundToAiReply(
       text,
       aiGenerated: true,
     })
+
+    // Product cards follow the text, never replace it: the reply has already
+    // landed, so `sendProductCards` reports failures instead of raising. Only
+    // ids the model was actually shown resolve to a product, which is also what
+    // keeps a hallucinated (or foreign) id from reaching a send.
+    const cited = resolveCitedProducts(catalogProducts, trailer.productIds)
+    if (cited.length > 0) {
+      await sendProductCards({
+        accountId,
+        userId: configOwnerUserId,
+        conversationId,
+        contactId,
+        products: cited,
+        withImages: trailer.withImages && config.shopProductImagesEnabled,
+      })
+    }
   } catch (err) {
     console.error('[ai auto-reply] dispatch failed:', err)
   }

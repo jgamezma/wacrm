@@ -26,6 +26,13 @@ export interface ShopStatus {
   shop_domain: string | null;
   display_name: string | null;
   connected_at: string | null;
+  /** Granted OAuth scopes. Provider-specific strings, not secrets — shown as
+   *  secondary detail behind the capability flags (spec 003 US-5). */
+  scopes: string[];
+  /** When the catalog cache was last rebuilt, or null if never (spec 003 §6). */
+  catalog_synced_at: string | null;
+  /** Why the last sync failed, or null when the last one succeeded. */
+  catalog_sync_error: string | null;
 }
 
 /** The non-secret columns we select for status. */
@@ -34,6 +41,9 @@ interface StatusRow {
   shop_domain: string | null;
   display_name: string | null;
   connected_at: string | null;
+  scopes: string[] | null;
+  catalog_synced_at: string | null;
+  catalog_sync_error: string | null;
 }
 
 /**
@@ -49,6 +59,9 @@ export function toStatusPayload(row: StatusRow | null): ShopStatus {
       shop_domain: null,
       display_name: null,
       connected_at: null,
+      scopes: [],
+      catalog_synced_at: null,
+      catalog_sync_error: null,
     };
   }
   return {
@@ -57,6 +70,9 @@ export function toStatusPayload(row: StatusRow | null): ShopStatus {
     shop_domain: row.shop_domain ?? null,
     display_name: row.display_name ?? null,
     connected_at: row.connected_at ?? null,
+    scopes: row.scopes ?? [],
+    catalog_synced_at: row.catalog_synced_at ?? null,
+    catalog_sync_error: row.catalog_sync_error ?? null,
   };
 }
 
@@ -67,7 +83,9 @@ export async function getConnectionStatus(
 ): Promise<ShopStatus> {
   const { data, error } = await db
     .from(TABLE)
-    .select('provider, shop_domain, display_name, connected_at')
+    .select(
+      'provider, shop_domain, display_name, connected_at, scopes, catalog_synced_at, catalog_sync_error',
+    )
     .eq('account_id', accountId)
     .maybeSingle();
   if (error) throw error;

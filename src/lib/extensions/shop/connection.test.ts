@@ -9,8 +9,11 @@ import {
   upsertConnection,
 } from './connection';
 
-// Keys that must NEVER appear in anything sent to the client.
-const SECRET_KEYS = ['access_token', 'scopes'];
+// Keys that must NEVER appear in anything sent to the client. `scopes` used to
+// be on this list; spec 003 (US-5) deliberately exposes it — the UI shows which
+// capabilities a connection has, with the raw scope strings as secondary
+// detail. They are provider-specific identifiers, not credentials.
+const SECRET_KEYS = ['access_token'];
 
 describe('toStatusPayload', () => {
   it('reports not-connected for a missing row and exposes no token fields', () => {
@@ -21,6 +24,9 @@ describe('toStatusPayload', () => {
       shop_domain: null,
       display_name: null,
       connected_at: null,
+      scopes: [],
+      catalog_synced_at: null,
+      catalog_sync_error: null,
     });
     for (const k of SECRET_KEYS) expect(payload).not.toHaveProperty(k);
   });
@@ -31,6 +37,9 @@ describe('toStatusPayload', () => {
       shop_domain: 'acme.myshopify.com',
       display_name: 'Acme',
       connected_at: '2026-07-16T00:00:00.000Z',
+      scopes: ['read_products', 'read_inventory'],
+      catalog_synced_at: '2026-08-18T10:00:00.000Z',
+      catalog_sync_error: null,
     });
     expect(payload).toEqual({
       connected: true,
@@ -38,6 +47,9 @@ describe('toStatusPayload', () => {
       shop_domain: 'acme.myshopify.com',
       display_name: 'Acme',
       connected_at: '2026-07-16T00:00:00.000Z',
+      scopes: ['read_products', 'read_inventory'],
+      catalog_synced_at: '2026-08-18T10:00:00.000Z',
+      catalog_sync_error: null,
     });
     for (const k of SECRET_KEYS) expect(payload).not.toHaveProperty(k);
   });
@@ -51,7 +63,7 @@ describe('getConnectionStatus', () => {
     const db = { from: () => ({ select }) } as unknown as SupabaseClient;
     await getConnectionStatus(db, 'acc-1');
     expect(select).toHaveBeenCalledWith(
-      'provider, shop_domain, display_name, connected_at',
+      'provider, shop_domain, display_name, connected_at, scopes, catalog_synced_at, catalog_sync_error',
     );
   });
 });

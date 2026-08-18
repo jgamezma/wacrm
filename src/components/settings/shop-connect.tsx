@@ -9,14 +9,29 @@
 // a fetch, so the cross-origin redirect isn't blocked. The callback route
 // redirects back here with `?result=` which we turn into a toast and strip.
 //
+// It also owns the catalog surface spec 003 adds: what this connection can
+// actually read (capabilities, derived server-side from the stored scopes), how
+// much catalog is cached, when it was last synced, a manual Sync, and the
+// Reconnect prompt when the granted access is narrower than the app now asks for.
+//
 // Spec: docs/extensions/specs/002-shop-inventory-connect.md §8
+//       docs/extensions/specs/003-shop-catalog-agent-knowledge.md §8, US-5
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { CheckCircle2, Loader2, Plug, Store, Unplug, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  Loader2,
+  Package,
+  Plug,
+  RefreshCw,
+  Store,
+  Unplug,
+  XCircle,
+} from 'lucide-react';
 
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
@@ -41,6 +56,12 @@ interface ShopStatus {
   connected_at: string | null;
   configured: boolean;
   providers: ProviderInfo[];
+  /** Generic flags — 'products' | 'inventory'. Provider-blind by design. */
+  capabilities: string[];
+  scopes: string[];
+  catalog_synced_at: string | null;
+  catalog_sync_error: string | null;
+  product_count: number;
 }
 
 export function ShopConnect() {
@@ -52,6 +73,7 @@ export function ShopConnect() {
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
   const [status, setStatus] = useState<ShopStatus | null>(null);
+  const [syncing, setSyncing] = useState(false);
   const [providerId, setProviderId] = useState('');
   const [shopInput, setShopInput] = useState('');
 
@@ -117,6 +139,36 @@ export function ShopConnect() {
     window.location.href = `/api/extensions/shop/connect?${qs.toString()}`;
   }
 
+  // Pull the catalog now. The route answers with the same shape whether it
+  // worked or not, so both branches read `product_count` / `error`.
+  async function handleSyncCatalog() {
+    try {
+      setSyncing(true);
+      const res = await fetch('/api/extensions/shop/catalog/sync', { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        toast.error(t('syncFailed', { reason: data.error || `HTTP ${res.status}` }));
+      } else {
+        toast.success(t('syncSuccess', { count: data.product_count ?? 0 }));
+      }
+      await fetchStatus();
+    } catch (err) {
+      console.error('Catalog sync error:', err);
+      toast.error(t('syncFailed', { reason: 'network error' }));
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  // Re-run the provider's OAuth to widen granted access (US-5). Same top-level
+  // navigation as the first connect, pre-filled with the connected shop.
+  function handleReconnect() {
+    if (!status?.provider) return;
+    const qs = new URLSearchParams({ provider: status.provider });
+    if (status.shop_domain) qs.set('shop', status.shop_domain);
+    window.location.href = `/api/extensions/shop/connect?${qs.toString()}`;
+  }
+
   async function handleDisconnect() {
     if (!confirm(t('disconnectConfirm'))) return;
     try {
@@ -152,6 +204,12 @@ export function ShopConnect() {
   const connected = status?.connected ?? false;
   const connectedProviderLabel =
     providers.find((p) => p.id === status?.provider)?.label ?? status?.provider ?? '';
+  const capabilities = status?.capabilities ?? [];
+  const hasProducts = capabilities.includes('products');
+  const hasInventory = capabilities.includes('inventory');
+  const lastSync = status?.catalog_synced_at
+    ? new Date(status.catalog_synced_at).toLocaleString()
+    : null;
 
   return (
     <section className="animate-in fade-in-50 duration-200">
@@ -278,6 +336,110 @@ export function ShopConnect() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Catalog — only meaningful once a shop is linked. */}
+        {connected && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Package className="size-5 text-primary" />
+                <CardTitle className="text-foreground">{t('catalogTitle')}</CardTitle>
+              </div>
+              <CardDescription className="text-muted-foreground">
+                {t('catalogDesc')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* What this connection may read. Capability flags, not scope
+                  names — the provider decides how its scopes map. */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  {t('capabilitiesLabel')}
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {hasProducts ? (
+                      <CheckCircle2 className="size-4 text-primary" />
+                    ) : (
+                      <XCircle className="size-4 text-muted-foreground" />
+                    )}
+                    {t('capProducts')}
+                  </span>
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {hasInventory ? (
+                      <CheckCircle2 className="size-4 text-primary" />
+                    ) : (
+                      <XCircle className="size-4 text-muted-foreground" />
+                    )}
+                    {t('capInventory')}
+                  </span>
+                </div>
+                {status?.scopes && status.scopes.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('scopesLabel', { scopes: status.scopes.join(', ') })}
+                  </p>
+                )}
+              </div>
+
+              {/* Missing access is a reconnect, never a silent retry: stored
+                  credentials cannot gain scopes they were not granted (US-5). */}
+              {!hasInventory && (
+                <Alert className="bg-amber-950/30 border-amber-700/50">
+                  <AlertTitle className="text-amber-200">
+                    {t('reconnectTitle')}
+                  </AlertTitle>
+                  <AlertDescription className="text-amber-100/80 text-sm">
+                    {t('reconnectDesc')}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {status?.catalog_sync_error && (
+                <Alert className="bg-red-950/30 border-red-800/50">
+                  <AlertTitle className="text-red-200">{t('syncErrorTitle')}</AlertTitle>
+                  <AlertDescription className="text-red-100/80 text-sm">
+                    {status.catalog_sync_error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>{t('productsCached', { count: status?.product_count ?? 0 })}</p>
+                <p>{lastSync ? t('lastSync', { when: lastSync }) : t('neverSynced')}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={handleSyncCatalog}
+                  disabled={!canEdit || syncing}
+                  className="border-border"
+                >
+                  {syncing ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      {t('syncing')}
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="size-4" />
+                      {t('syncNow')}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleReconnect}
+                  disabled={!canEdit}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Plug className="size-4" />
+                  {t('reconnect')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </section>
   );

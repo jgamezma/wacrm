@@ -14,10 +14,12 @@ interface AiConfigRow {
   embeddings_api_key: string | null
   context_message_limit: number
   memory_autowrite_enabled: boolean
+  shop_catalog_enabled: boolean
+  shop_product_images_enabled: boolean
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key, context_message_limit, memory_autowrite_enabled'
+  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, handoff_agent_id, embeddings_api_key, context_message_limit, memory_autowrite_enabled, shop_catalog_enabled, shop_product_images_enabled'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -83,6 +85,10 @@ export async function loadAiConfig(
     embeddingsApiKey,
     contextMessageLimit: row.context_message_limit,
     memoryAutowriteEnabled: row.memory_autowrite_enabled,
+    // Columns added by fork migration 9004 — default to the column defaults so
+    // a config row written before it was applied still behaves sensibly.
+    shopCatalogEnabled: row.shop_catalog_enabled !== false,
+    shopProductImagesEnabled: row.shop_product_images_enabled !== false,
   }
 }
 

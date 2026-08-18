@@ -11,12 +11,20 @@ import { logAiUsage } from '@/lib/ai/usage'
 import { supabaseAdmin } from '@/lib/ai/admin-client'
 import { AiError } from '@/lib/ai/types'
 import { loadContactMemory } from '@/lib/extensions/ai-memory/memory'
+import { loadShopCatalog } from '@/lib/extensions/shop/agent'
+import {
+  appendCatalogToPrompt,
+  parseProductTrailer,
+  toProductSuggestions,
+} from '@/lib/extensions/shop/catalog'
 
 /**
  * POST /api/ai/draft  (agent+)
  *
  * Body: { conversation_id }
- * Returns: { draft } — a suggested reply for the agent to edit + send.
+ * Returns: { draft, products } — a suggested reply for the agent to edit +
+ * send, plus the shop products the same retrieval surfaced so the agent can
+ * attach one as text or as a photo. Nothing is sent from here.
  *
  * Uses the account's configured provider/key (BYO). Read-only: it never
  * sends or stores anything, just hands text back to the composer.
@@ -111,14 +119,36 @@ export async function POST(request: Request) {
       conversation.contact_id ?? null,
     )
 
-    const systemPrompt = buildSystemPrompt({
-      userPrompt: config.systemPrompt,
-      mode: 'draft',
-      knowledge,
-      memory,
+    // Products from the connected shop matching the customer's question
+    // (best-effort — [] when no shop is connected or the toggle is off). No
+    // live stock refresh here: the connection row is admin-only, and a draft is
+    // not an outbound message yet.
+    const catalogProducts = await loadShopCatalog(supabase, accountId, {
+      catalogEnabled: config.shopCatalogEnabled,
+      embeddingsApiKey: config.embeddingsApiKey,
+      queryText: latestUserMessage(messages),
     })
 
-    const { text, usage } = await generateReply({ config, systemPrompt, messages })
+    const systemPrompt = appendCatalogToPrompt(
+      buildSystemPrompt({
+        userPrompt: config.systemPrompt,
+        mode: 'draft',
+        knowledge,
+        memory,
+      }),
+      // The human picks which product to attach here, so the model is not
+      // invited to request card sends (spec §7.5: no auto-images from draft).
+      { products: catalogProducts },
+    )
+
+    const { text: rawText, usage } = await generateReply({
+      config,
+      systemPrompt,
+      messages,
+    })
+    // Defensive: the draft prompt doesn't teach the trailer, but a model that
+    // emits one anyway must not leave a control phrase in the agent's composer.
+    const { text } = parseProductTrailer(rawText)
 
     // Record spend on the account's BYO key. Best-effort + via the
     // service role (the log has no `authenticated` INSERT policy). This
@@ -140,7 +170,10 @@ export async function POST(request: Request) {
       console.error('[ai/draft] usage log skipped:', logErr)
     }
 
-    return NextResponse.json({ draft: text })
+    return NextResponse.json({
+      draft: text,
+      products: toProductSuggestions(catalogProducts),
+    })
   } catch (err) {
     if (err instanceof AiError) {
       return NextResponse.json(

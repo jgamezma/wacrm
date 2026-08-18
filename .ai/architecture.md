@@ -27,7 +27,7 @@ A separate **MCP server** (`mcp-server/`) exposes the CRM to AI assistants.
 |-----------|----------------|------|
 | Web UI | Inbox, contacts, pipelines, broadcasts, automations, dashboard | Next.js App Router, React 19, Tailwind v4 |
 | API (route handlers) | Server logic, webhooks, public `/api/v1` | Next.js Route Handlers under `src/app/api` |
-| Domain logic | Feature logic kept out of components | `src/lib/*` (inbox, contacts, broadcast, automations, flows, ai, whatsapp, webhooks, auth, account, api-keys, storage) |
+| Domain logic | Feature logic kept out of components | `src/lib/*` (inbox, contacts, broadcast, automations, flows, ai, whatsapp, webhooks, auth, account, api-keys, storage) + fork extensions in `src/lib/extensions/*` (ai-memory, shop) |
 | Data | Persistence, auth, realtime, vector search | Supabase (Postgres + RLS, Auth, Storage, Realtime, pgvector) |
 | WhatsApp integration | Send/receive, templates, status, registration | Meta Graph API + inbound webhooks (`src/lib/whatsapp`, `src/lib/webhooks`) |
 | AI assistant | Reply drafting, auto-reply, knowledge-base retrieval | BYO OpenAI/Anthropic (`src/lib/ai`), encrypted keys |
@@ -47,6 +47,10 @@ recipients (wamid, incremental counts), automations + flows (+ media), message t
 AI: `ai_configs` (BYO key, `context_message_limit`), `ai_knowledge_*` (KB + pgvector),
 and — fork extension — `ai_contact_memories` (durable per-contact notes injected into
 the reply prompt; see `docs/extensions/specs/001-ai-agent-memory.md`).
+Shop (fork extension): `shop_connections` (one account-scoped, provider-agnostic
+commerce link, encrypted credential — spec 002) and the catalog cache
+`shop_products` / `shop_product_variants` (+ FTS/pgvector match RPCs), rebuilt by
+pull-sync and cleared on disconnect — spec 003.
 
 ## Key flows
 
@@ -56,9 +60,15 @@ the reply prompt; see `docs/extensions/specs/001-ai-agent-memory.md`).
    status webhooks correlate by `wamid` → delivery/read state updated.
 3. **Broadcast:** select Meta template + audience → per-recipient variable substitution →
    send in batches → track delivery/read via status webhooks (incremental counters).
-4. **AI reply:** load conversation + knowledge base → hybrid retrieval (Postgres FTS, or
-   pgvector when an embeddings key is set) → draft with BYO provider key.
-5. **Auth / tenancy:** Supabase Auth session → account resolved → RLS scopes every query;
+4. **AI reply:** load conversation + knowledge base + contact memory + (fork) matching
+   shop products → hybrid retrieval (Postgres FTS, or pgvector when an embeddings key is
+   set) → draft with BYO provider key. In auto-reply the model may append a
+   `[[PRODUCTS]]` trailer; the runtime strips it and sends 0–3 product cards as text or
+   image + caption after the reply text lands.
+5. **Shop catalog sync (fork):** connect / manual Sync → `ShopProvider.listCatalog` →
+   normalised products + variants upserted into the account's catalog cache (stock
+   numbers only when the connection has the inventory capability).
+6. **Auth / tenancy:** Supabase Auth session → account resolved → RLS scopes every query;
    `src/middleware.ts` guards routes.
 
 ## Technology choices
