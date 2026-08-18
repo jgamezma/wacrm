@@ -356,10 +356,12 @@ export function appendCatalogToPrompt(
 
   if (args.allowProductCards) {
     parts.push(
-      `If, and only if, the customer is asking about something in the catalog above and it would help them to see it, ` +
-        `end your message with a final line containing exactly ${PRODUCTS_SENTINEL} followed by a JSON object on the next line, e.g.:\n` +
+      `You can show the customer a product — including its photo, when the entry above says a photo is available. ` +
+        `To do that, end your message with a final line containing exactly ${PRODUCTS_SENTINEL} followed by a JSON object on the next line, e.g.:\n` +
         `${PRODUCTS_SENTINEL}\n{"ids":["<id from the catalog above>"],"with_images":true}\n` +
-        `Use at most ${PRODUCT_CARD_MAX} ids, only ids listed above, and write the reply so it still reads correctly on its own — the trailer is removed before sending. Omit it entirely when no product should be shown.`,
+        `Use at most ${PRODUCT_CARD_MAX} ids, and only ids listed above. Never tell the customer you cannot send photos when a photo is available — send it this way instead. ` +
+        `Always write the customer-facing reply first and never send the trailer on its own: the trailer is stripped before sending, so a message that is only a trailer would arrive as an image with no reply. ` +
+        `Omit the trailer entirely when no product should be shown.`,
     );
   }
 

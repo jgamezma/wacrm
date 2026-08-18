@@ -198,6 +198,41 @@ describe('dispatchInboundToAiReply — shop catalog', () => {
     expect(h.sendProductCards).not.toHaveBeenCalled()
   })
 
+  it('sends the cards alone when the reply is only a card request', async () => {
+    // "show me the photo" — the model answers with the product, not prose. That
+    // is a real reply: the card's caption carries name, price, and stock.
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: '[[PRODUCTS]]\n{"ids":["prod-1"],"with_images":true}',
+      handoff: false,
+    })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await dispatchInboundToAiReply(ARGS)
+
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.sendProductCards).toHaveBeenCalledWith(
+      expect.objectContaining({ products: [CATALOG_PRODUCT], withImages: true }),
+    )
+    // A card-only turn must not pause the thread.
+    expect(h.state.updatePayload).toBeNull()
+    expect(h.state.rpcCalls).toHaveLength(1)
+  })
+
+  it('still hands off when there is neither text nor a resolvable product', async () => {
+    h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
+    h.generateReply.mockResolvedValue({
+      text: '[[PRODUCTS]]\n{"ids":["not-a-retrieved-id"]}',
+      handoff: false,
+    })
+
+    await dispatchInboundToAiReply(ARGS)
+
+    expect(h.engineSendText).not.toHaveBeenCalled()
+    expect(h.sendProductCards).not.toHaveBeenCalled()
+    expect(h.state.updatePayload).toMatchObject({ ai_autoreply_disabled: true })
+  })
+
   it('sends no cards when the model hands off', async () => {
     h.loadShopCatalog.mockResolvedValue([CATALOG_PRODUCT])
     h.generateReply.mockResolvedValue({

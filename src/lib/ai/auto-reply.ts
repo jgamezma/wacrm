@@ -149,6 +149,12 @@ export async function dispatchInboundToAiReply(
     // reach a customer.
     const trailer = parseProductTrailer(rawText)
     const text = trailer.text
+    // Resolved before the handoff gate below, because a turn that is ONLY a
+    // card request ("show me the photo" → the product speaks for itself) is a
+    // real reply: its caption carries the name, price, and availability. Only
+    // ids the model was actually shown resolve, which is what keeps a
+    // hallucinated (or foreign) id from reaching a send.
+    const citedProducts = resolveCitedProducts(catalogProducts, trailer.productIds)
 
     // Record token spend on the account's BYO key. Fire-and-forget so it
     // never adds latency to the customer-facing send: `logAiUsage`
@@ -164,7 +170,7 @@ export async function dispatchInboundToAiReply(
       usage,
     })
 
-    if (handoff || !text) {
+    if (handoff || (!text && citedProducts.length === 0)) {
       // The model can't (or shouldn't) answer — stop auto-replying on
       // this thread and hand it to a human. We (a) pause the bot here
       // (sticky until re-enabled), (b) route the conversation to the
@@ -211,27 +217,32 @@ export async function dispatchInboundToAiReply(
     }
     if (claimed !== true) return // lost the per-conversation cap race
 
-    await engineSendText({
-      accountId,
-      userId: configOwnerUserId,
-      conversationId,
-      contactId,
-      text,
-      aiGenerated: true,
-    })
+    if (text) {
+      await engineSendText({
+        accountId,
+        userId: configOwnerUserId,
+        conversationId,
+        contactId,
+        text,
+        aiGenerated: true,
+      })
+    } else {
+      // Card-only turn. Worth a breadcrumb: the prompt asks for a line of text
+      // alongside the trailer, so this means the model skipped it.
+      console.warn(
+        `[ai auto-reply] conversation ${conversationId}: reply was a product-card request with no text; sending the cards alone.`,
+      )
+    }
 
-    // Product cards follow the text, never replace it: the reply has already
-    // landed, so `sendProductCards` reports failures instead of raising. Only
-    // ids the model was actually shown resolve to a product, which is also what
-    // keeps a hallucinated (or foreign) id from reaching a send.
-    const cited = resolveCitedProducts(catalogProducts, trailer.productIds)
-    if (cited.length > 0) {
+    // Cards follow the text, never replace it (when there is text): it has
+    // already landed, so `sendProductCards` reports failures instead of raising.
+    if (citedProducts.length > 0) {
       await sendProductCards({
         accountId,
         userId: configOwnerUserId,
         conversationId,
         contactId,
-        products: cited,
+        products: citedProducts,
         withImages: trailer.withImages && config.shopProductImagesEnabled,
       })
     }
